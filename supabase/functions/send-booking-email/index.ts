@@ -1,4 +1,5 @@
 import "https://esm.sh/@supabase/functions-js/src/edge-runtime.d.ts";
+import nodemailer from "npm:nodemailer@6.9.16";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,13 +22,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    if (!RESEND_API_KEY) {
-      return new Response(JSON.stringify({ error: "RESEND_API_KEY not set" }), {
+    const GMAIL_APP_PASSWORD = Deno.env.get("GMAIL_APP_PASSWORD");
+    if (!GMAIL_APP_PASSWORD) {
+      return new Response(JSON.stringify({ error: "GMAIL_APP_PASSWORD not set" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const GMAIL_USER = "bjarkikjellsson@gmail.com";
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: GMAIL_USER,
+        pass: GMAIL_APP_PASSWORD,
+      },
+    });
 
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(bookingId)}`;
     const cancelUrl = `${appUrl}/cancel/${bookingId}`;
@@ -62,31 +73,14 @@ Deno.serve(async (req) => {
       </div>
     `;
 
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: "Sägen Filmkväll <onboarding@resend.dev>",
-        to: [email],
-        subject: "🎬 Din bokning – Sägen Filmkväll 2026",
-        html,
-      }),
+    await transporter.sendMail({
+      from: `"Sägen Filmkväll" <${GMAIL_USER}>`,
+      to: email,
+      subject: "🎬 Din bokning – Sägen Filmkväll 2026",
+      html,
     });
 
-    const result = await res.json();
-
-    if (!res.ok) {
-      console.error("Resend error:", result);
-      return new Response(JSON.stringify({ error: "Email send failed", details: result }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    return new Response(JSON.stringify({ success: true, id: result.id }), {
+    return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
