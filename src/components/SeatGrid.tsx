@@ -44,34 +44,6 @@ const SeatGrid = ({ seats, selectedIds, onToggleSeat }: SeatGridProps) => {
         );
       })}
 
-      {/* Couple zone */}
-      <div className="flex items-center justify-between w-full mt-6 px-4">
-        <div className="flex gap-1">
-          {seats
-            .filter((s) => s.type === "couple" && s.id.startsWith("couple-L"))
-            .map((s) => (
-              <SeatIcon
-                key={s.id}
-                seat={s}
-                isSelected={selectedIds.includes(s.id)}
-                onClick={() => onToggleSeat(s.id)}
-              />
-            ))}
-        </div>
-        <span className="text-muted-foreground text-xs uppercase tracking-widest">Ingång</span>
-        <div className="flex gap-1">
-          {seats
-            .filter((s) => s.type === "couple" && s.id.startsWith("couple-R"))
-            .map((s) => (
-              <SeatIcon
-                key={s.id}
-                seat={s}
-                isSelected={selectedIds.includes(s.id)}
-                onClick={() => onToggleSeat(s.id)}
-              />
-            ))}
-        </div>
-      </div>
 
       {/* Legend */}
       <div className="flex gap-4 mt-6 text-xs text-muted-foreground flex-wrap justify-center">
