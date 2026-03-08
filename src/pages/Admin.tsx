@@ -1,56 +1,75 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import QrScanner from "@/components/QrScanner";
-import { initialSeats, type Seat } from "@/data/seatLayout";
-import { ShieldCheck, ScanLine, CheckCircle, XCircle, LogOut } from "lucide-react";
+import { ShieldCheck, ScanLine, CheckCircle, XCircle, LogOut, Loader2 } from "lucide-react";
 
 const ADMIN_PASSWORD = "admin123";
 
 const Admin = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState("");
-  const [seats, setSeats] = useState<Seat[]>(initialSeats);
   const [scanResult, setScanResult] = useState<null | { success: boolean; message: string }>(null);
   const [scanning, setScanning] = useState(false);
+  const [stats, setStats] = useState({ available: 0, booked: 0, checkedIn: 0 });
+  const [loading, setLoading] = useState(false);
+
+  const fetchStats = useCallback(async () => {
+    const { data } = await supabase.from("seats").select("is_booked, checked_in");
+    if (!data) return;
+    setStats({
+      available: data.filter((s) => !s.is_booked).length,
+      booked: data.filter((s) => s.is_booked).length,
+      checkedIn: data.filter((s) => s.checked_in).length,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (isLoggedIn) fetchStats();
+  }, [isLoggedIn, fetchStats]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      setIsLoggedIn(true);
-    }
+    if (password === ADMIN_PASSWORD) setIsLoggedIn(true);
   };
 
   const handleScan = useCallback(
-    (bookingId: string) => {
+    async (bookingId: string) => {
       setScanning(false);
-      const bookedSeats = seats.filter((s) => s.bookingId === bookingId);
+      setLoading(true);
 
-      if (bookedSeats.length === 0) {
+      const { data: booking } = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("id", bookingId)
+        .single();
+
+      if (!booking) {
         setScanResult({ success: false, message: "Ogiltig bokning – hittades inte." });
+        setLoading(false);
         return;
       }
 
-      if (bookedSeats.some((s) => s.checkedIn)) {
+      if (booking.checked_in) {
         setScanResult({ success: false, message: "Redan incheckad! Biljetten har redan använts." });
+        setLoading(false);
         return;
       }
 
-      setSeats((prev) =>
-        prev.map((s) => (s.bookingId === bookingId ? { ...s, checkedIn: true } : s))
-      );
+      await supabase.from("bookings").update({ checked_in: true }).eq("id", bookingId);
+      await supabase.from("seats").update({ checked_in: true }).in("id", booking.seat_ids);
+
       setScanResult({
         success: true,
-        message: `Välkommen! ${bookedSeats.length} plats${bookedSeats.length > 1 ? "er" : ""} incheckade.`,
+        message: `Välkommen! ${booking.seat_ids.length} plats${booking.seat_ids.length > 1 ? "er" : ""} incheckade.`,
       });
+      setLoading(false);
+      fetchStats();
     },
-    [seats]
+    [fetchStats]
   );
-
-  const booked = seats.filter((s) => s.isBooked).length;
-  const checkedIn = seats.filter((s) => s.checkedIn).length;
-  const available = seats.filter((s) => !s.isBooked).length;
 
   if (!isLoggedIn) {
     return (
@@ -91,29 +110,12 @@ const Admin = () => {
           </Button>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6">
-          <Card>
-            <CardContent className="pt-4 text-center">
-              <p className="text-2xl font-bold">{available}</p>
-              <p className="text-xs text-muted-foreground">Lediga</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4 text-center">
-              <p className="text-2xl font-bold text-primary">{booked}</p>
-              <p className="text-xs text-muted-foreground">Bokade</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4 text-center">
-              <p className="text-2xl font-bold text-[hsl(var(--success))]">{checkedIn}</p>
-              <p className="text-xs text-muted-foreground">Incheckade</p>
-            </CardContent>
-          </Card>
+          <Card><CardContent className="pt-4 text-center"><p className="text-2xl font-bold">{stats.available}</p><p className="text-xs text-muted-foreground">Lediga</p></CardContent></Card>
+          <Card><CardContent className="pt-4 text-center"><p className="text-2xl font-bold text-primary">{stats.booked}</p><p className="text-xs text-muted-foreground">Bokade</p></CardContent></Card>
+          <Card><CardContent className="pt-4 text-center"><p className="text-2xl font-bold text-[hsl(var(--success))]">{stats.checkedIn}</p><p className="text-xs text-muted-foreground">Incheckade</p></CardContent></Card>
         </div>
 
-        {/* Scanner */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -122,7 +124,9 @@ const Admin = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {scanning ? (
+            {loading ? (
+              <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+            ) : scanning ? (
               <QrScanner onScan={handleScan} />
             ) : (
               <Button onClick={() => { setScanning(true); setScanResult(null); }} className="w-full">
@@ -132,7 +136,6 @@ const Admin = () => {
           </CardContent>
         </Card>
 
-        {/* Scan result */}
         {scanResult && (
           <Card className={scanResult.success ? "border-[hsl(var(--success))]/50" : "border-destructive/50"}>
             <CardContent className="pt-4 flex items-center gap-3">
