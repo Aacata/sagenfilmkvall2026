@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ interface ScannerTabProps {
   onCheckedIn: () => void;
 }
 
-const ScannerTab = ({ onCheckedIn }: ScannerTabProps) => {
+const ScannerTab = forwardRef<HTMLDivElement, ScannerTabProps>(({ onCheckedIn }, ref) => {
   const [scanning, setScanning] = useState(false);
   const [loading, setLoading] = useState(false);
   const [scanResult, setScanResult] = useState<null | { success: boolean; message: string }>(null);
@@ -51,7 +51,7 @@ const ScannerTab = ({ onCheckedIn }: ScannerTabProps) => {
   );
 
   return (
-    <div className="space-y-4">
+    <div ref={ref} className="space-y-4">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -72,7 +72,13 @@ const ScannerTab = ({ onCheckedIn }: ScannerTabProps) => {
               </Button>
             </div>
           ) : (
-            <Button onClick={() => { setScanning(true); setScanResult(null); }} className="w-full">
+            <Button
+              onClick={() => {
+                setScanning(true);
+                setScanResult(null);
+              }}
+              className="w-full"
+            >
               Starta insläpp
             </Button>
           )}
@@ -93,6 +99,8 @@ const ScannerTab = ({ onCheckedIn }: ScannerTabProps) => {
       )}
     </div>
   );
-};
+});
+
+ScannerTab.displayName = "ScannerTab";
 
 export default ScannerTab;
