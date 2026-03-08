@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, forwardRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -7,10 +7,10 @@ interface QrScannerProps {
   onScan: (data: string) => void;
 }
 
-const QrScanner = forwardRef<HTMLDivElement, QrScannerProps>(({ onScan }, ref) => {
+const QrScanner = ({ onScan }: QrScannerProps) => {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const onScanRef = useRef(onScan);
-  const readerIdRef = useRef(`qr-reader-${crypto.randomUUID()}`);
+  const [readerId] = useState(() => `qr-reader-${crypto.randomUUID()}`);
   const startedRef = useRef(false);
 
   const [starting, setStarting] = useState(false);
@@ -28,7 +28,7 @@ const QrScanner = forwardRef<HTMLDivElement, QrScannerProps>(({ onScan }, ref) =
         await scanner.stop();
       }
     } catch {
-      // Ignore "Cannot stop, scanner is not running or paused"
+      // ignore
     } finally {
       startedRef.current = false;
       setRunning(false);
@@ -36,7 +36,7 @@ const QrScanner = forwardRef<HTMLDivElement, QrScannerProps>(({ onScan }, ref) =
       try {
         await scanner.clear();
       } catch {
-        // ignore clear errors
+        // ignore
       }
       scannerRef.current = null;
     }
@@ -48,7 +48,7 @@ const QrScanner = forwardRef<HTMLDivElement, QrScannerProps>(({ onScan }, ref) =
     setErrorMessage(null);
     setStarting(true);
 
-    const scanner = new Html5Qrcode(readerIdRef.current);
+    const scanner = new Html5Qrcode(readerId);
     scannerRef.current = scanner;
 
     try {
@@ -70,7 +70,7 @@ const QrScanner = forwardRef<HTMLDivElement, QrScannerProps>(({ onScan }, ref) =
     } finally {
       setStarting(false);
     }
-  }, [running, starting, stopScanner]);
+  }, [running, starting, stopScanner, readerId]);
 
   useEffect(() => {
     return () => {
@@ -79,8 +79,8 @@ const QrScanner = forwardRef<HTMLDivElement, QrScannerProps>(({ onScan }, ref) =
   }, [stopScanner]);
 
   return (
-    <div ref={ref} className="w-full max-w-sm mx-auto space-y-3">
-      <div id={readerIdRef.current} className="rounded-lg overflow-hidden min-h-12" />
+    <div className="w-full max-w-sm mx-auto space-y-3">
+      <div id={readerId} className="rounded-lg overflow-hidden min-h-12" />
 
       {!running && (
         <Button type="button" onClick={() => void startScanner()} disabled={starting} className="w-full">
@@ -92,8 +92,6 @@ const QrScanner = forwardRef<HTMLDivElement, QrScannerProps>(({ onScan }, ref) =
       {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
     </div>
   );
-});
-
-QrScanner.displayName = "QrScanner";
+};
 
 export default QrScanner;
