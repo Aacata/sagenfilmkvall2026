@@ -1,33 +1,26 @@
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import QrScanner from "@/components/QrScanner";
-import { ShieldCheck, ScanLine, CheckCircle, XCircle, LogOut, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ShieldCheck, LogOut, Loader2 } from "lucide-react";
+import AdminLogin from "@/components/admin/AdminLogin";
+import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
+import ScannerTab from "@/components/admin/ScannerTab";
+import BookingsTab from "@/components/admin/BookingsTab";
+import AdminDelegateTab from "@/components/admin/AdminDelegateTab";
 
 const Admin = () => {
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [scanResult, setScanResult] = useState<null | { success: boolean; message: string }>(null);
-  const [scanning, setScanning] = useState(false);
   const [stats, setStats] = useState({ available: 0, booked: 0, checkedIn: 0 });
-  const [loading, setLoading] = useState(false);
 
-  // Check auth state
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         setUser({ id: session.user.id, email: session.user.email || "" });
-        // Check admin role
-        const { data } = await supabase.rpc("has_role", {
-          _user_id: session.user.id,
-          _role: "admin",
-        });
+        const { data } = await supabase.rpc("has_role", { _user_id: session.user.id, _role: "admin" });
         setIsAdmin(!!data);
       } else {
         setUser(null);
@@ -39,10 +32,7 @@ const Admin = () => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         setUser({ id: session.user.id, email: session.user.email || "" });
-        const { data } = await supabase.rpc("has_role", {
-          _user_id: session.user.id,
-          _role: "admin",
-        });
+        const { data } = await supabase.rpc("has_role", { _user_id: session.user.id, _role: "admin" });
         setIsAdmin(!!data);
       }
       setAuthLoading(false);
@@ -62,60 +52,24 @@ const Admin = () => {
   }, []);
 
   useEffect(() => {
-    if (isAdmin) fetchStats();
-  }, [isAdmin, fetchStats]);
+    if (!isAdmin) return;
+    fetchStats();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      toast.error(error.message);
-      setAuthLoading(false);
-    }
-  };
+    const channel = supabase
+      .channel("admin-stats")
+      .on("postgres_changes", { event: "*", schema: "public", table: "seats" }, () => {
+        fetchStats();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [isAdmin, fetchStats]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setIsAdmin(false);
   };
-
-  const handleScan = useCallback(
-    async (bookingId: string) => {
-      setScanning(false);
-      setLoading(true);
-
-      const { data: booking } = await supabase
-        .from("bookings")
-        .select("*")
-        .eq("id", bookingId)
-        .single();
-
-      if (!booking) {
-        setScanResult({ success: false, message: "Ogiltig bokning – hittades inte." });
-        setLoading(false);
-        return;
-      }
-
-      if (booking.checked_in) {
-        setScanResult({ success: false, message: "Redan incheckad! Biljetten har redan använts." });
-        setLoading(false);
-        return;
-      }
-
-      await supabase.from("bookings").update({ checked_in: true }).eq("id", bookingId);
-      await supabase.from("seats").update({ checked_in: true }).in("id", booking.seat_ids);
-
-      setScanResult({
-        success: true,
-        message: `Välkommen! ${booking.seat_ids.length} plats${booking.seat_ids.length > 1 ? "er" : ""} incheckade.`,
-      });
-      setLoading(false);
-      fetchStats();
-    },
-    [fetchStats]
-  );
 
   if (authLoading) {
     return (
@@ -125,62 +79,9 @@ const Admin = () => {
     );
   }
 
-  // Not logged in
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <Card className="w-full max-w-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-primary" />
-              Admin-inloggning
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="flex flex-col gap-3">
-              <Input
-                type="email"
-                placeholder="E-post"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-              <Input
-                type="password"
-                placeholder="Lösenord"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              <Button type="submit">Logga in</Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  if (!user) return <AdminLogin onLoading={setAuthLoading} />;
+  if (!isAdmin) return <AdminAccessDenied email={user.email} onLogout={handleLogout} />;
 
-  // Logged in but not admin
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <Card className="w-full max-w-sm text-center">
-          <CardContent className="pt-6 flex flex-col items-center gap-4">
-            <XCircle className="w-12 h-12 text-destructive" />
-            <p className="font-medium">Åtkomst nekad</p>
-            <p className="text-sm text-muted-foreground">
-              {user.email} har inte admin-behörighet.
-            </p>
-            <Button variant="outline" onClick={handleLogout}>
-              <LogOut className="w-4 h-4 mr-2" /> Logga ut
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Admin dashboard
   return (
     <div className="min-h-screen bg-background px-4 py-8">
       <div className="max-w-2xl mx-auto">
@@ -197,44 +98,33 @@ const Admin = () => {
           </div>
         </div>
 
+        {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           <Card><CardContent className="pt-4 text-center"><p className="text-2xl font-bold">{stats.available}</p><p className="text-xs text-muted-foreground">Lediga</p></CardContent></Card>
           <Card><CardContent className="pt-4 text-center"><p className="text-2xl font-bold text-primary">{stats.booked}</p><p className="text-xs text-muted-foreground">Bokade</p></CardContent></Card>
           <Card><CardContent className="pt-4 text-center"><p className="text-2xl font-bold text-[hsl(var(--success))]">{stats.checkedIn}</p><p className="text-xs text-muted-foreground">Incheckade</p></CardContent></Card>
         </div>
 
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <ScanLine className="w-5 h-5" />
-              QR-scanner
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
-            ) : scanning ? (
-              <QrScanner onScan={handleScan} />
-            ) : (
-              <Button onClick={() => { setScanning(true); setScanResult(null); }} className="w-full">
-                Starta scanner
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+        {/* Tabs */}
+        <Tabs defaultValue="scanner" className="space-y-4">
+          <TabsList className="w-full">
+            <TabsTrigger value="scanner" className="flex-1">Insläpp</TabsTrigger>
+            <TabsTrigger value="bookings" className="flex-1">Bokningar</TabsTrigger>
+            <TabsTrigger value="admins" className="flex-1">Admins</TabsTrigger>
+          </TabsList>
 
-        {scanResult && (
-          <Card className={scanResult.success ? "border-[hsl(var(--success))]/50" : "border-destructive/50"}>
-            <CardContent className="pt-4 flex items-center gap-3">
-              {scanResult.success ? (
-                <CheckCircle className="w-8 h-8 text-[hsl(var(--success))]" />
-              ) : (
-                <XCircle className="w-8 h-8 text-destructive" />
-              )}
-              <p className="font-medium">{scanResult.message}</p>
-            </CardContent>
-          </Card>
-        )}
+          <TabsContent value="scanner">
+            <ScannerTab onCheckedIn={fetchStats} />
+          </TabsContent>
+
+          <TabsContent value="bookings">
+            <BookingsTab />
+          </TabsContent>
+
+          <TabsContent value="admins">
+            <AdminDelegateTab />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
