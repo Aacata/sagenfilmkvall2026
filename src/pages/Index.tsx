@@ -74,11 +74,25 @@ const Index = () => {
         return;
       }
 
+      // Build seat labels for email
+      const seatLabels = seats
+        .filter((s) => selectedIds.includes(s.id))
+        .map((s) => `Rad ${s.row}, Plats ${s.seatNumber}${s.type === "vip" ? " ★" : ""}`);
+
+      // Send confirmation email (fire-and-forget)
+      supabase.functions
+        .invoke("send-booking-email", {
+          body: { bookingId: booking.id, email, seatLabels },
+        })
+        .then(({ error }) => {
+          if (error) console.error("Email send error:", error);
+        });
+
       setSelectedIds([]);
-      toast.success("Bokning bekräftad!");
+      toast.success("Bokning bekräftad! En bekräftelse skickas till din e-post.");
       navigate(`/booking/${booking.id}`);
     },
-    [selectedIds, navigate]
+    [selectedIds, seats, navigate]
   );
 
   const selectedSeats = seats.filter((s) => selectedIds.includes(s.id));
