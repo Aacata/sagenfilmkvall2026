@@ -9,6 +9,7 @@ import AdminAccessDenied from "@/components/admin/AdminAccessDenied";
 import ScannerTab from "@/components/admin/ScannerTab";
 import BookingsTab from "@/components/admin/BookingsTab";
 import AdminDelegateTab from "@/components/admin/AdminDelegateTab";
+import ChangePasswordTab from "@/components/admin/ChangePasswordTab";
 
 const Admin = () => {
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
