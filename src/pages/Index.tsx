@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { dbSeatToSeat, type Seat } from "@/data/seatLayout";
 import SeatGrid from "@/components/SeatGrid";
 import BookingPanel from "@/components/BookingPanel";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import sagenLogo from "@/assets/sagen-logo.png";
 
 const Index = () => {
@@ -106,7 +107,10 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background px-4 py-8">
+    <div className="min-h-screen bg-background px-4 py-8 relative">
+      <Button variant="ghost" size="sm" asChild className="absolute top-4 right-4 text-muted-foreground">
+        <Link to="/admin"><ShieldCheck className="w-4 h-4 mr-1" /> Admin</Link>
+      </Button>
       <header className="text-center mb-8">
         <div className="flex items-center justify-center mb-4">
           <img src={sagenLogo} alt="Sägen Film" className="h-32 object-contain" />
