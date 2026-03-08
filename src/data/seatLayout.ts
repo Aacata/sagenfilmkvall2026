@@ -25,7 +25,7 @@ export const rowConfigs: RowConfig[] = [
   { row: 5, seats: [{ type: "standard", count: 13 }], offset: 0 },
   { row: 6, seats: [{ type: "standard", count: 12 }], offset: 1 },
   { row: 7, seats: [{ type: "standard", count: 12 }], offset: 1 },
-  { row: 8, seats: [{ type: "standard", count: 8 }], offset: 3 },
+  { row: 8, seats: [{ type: "standard", count: 4 }, { type: "empty", count: 1 }, { type: "standard", count: 4 }], offset: 3 },
 ];
 
 export function dbSeatToSeat(row: {
