@@ -19,12 +19,9 @@ const SeatGrid = ({ seats, selectedIds, onToggleSeat }: SeatGridProps) => {
       {/* Seat rows */}
       {rowConfigs.map((rc) => {
         const rowSeats = seats.filter((s) => s.row === rc.row);
-        const totalInRow = rc.seats.reduce((a, b) => a + b.count, 0);
-        const paddingLeft = Math.floor((maxCols - totalInRow) / 2) + rc.offset;
-
         let seatIdx = 0;
         return (
-          <div key={rc.row} className="flex items-center gap-1" style={{ paddingLeft: `${paddingLeft * 36}px` }}>
+          <div key={rc.row} className="flex items-center justify-center gap-1 w-full">
             <span className="text-muted-foreground text-[10px] w-5 text-right mr-1">{rc.row}</span>
             {rc.seats.map((group, gi) =>
               Array.from({ length: group.count }).map((_, i) => {
