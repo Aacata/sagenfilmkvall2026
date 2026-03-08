@@ -1,4 +1,4 @@
-import { rowConfigs, coupleSeats, type Seat } from "@/data/seatLayout";
+import { rowConfigs, type Seat } from "@/data/seatLayout";
 import SeatIcon from "./SeatIcon";
 
 interface SeatGridProps {
@@ -51,7 +51,7 @@ const SeatGrid = ({ seats, selectedIds, onToggleSeat }: SeatGridProps) => {
       <div className="flex items-center justify-between w-full mt-6 px-4">
         <div className="flex gap-1">
           {seats
-            .filter((s) => s.type === "couple" && coupleSeats.find((c) => c.id === s.id)?.side === "left")
+            .filter((s) => s.type === "couple" && s.id.startsWith("couple-L"))
             .map((s) => (
               <SeatIcon
                 key={s.id}
@@ -64,7 +64,7 @@ const SeatGrid = ({ seats, selectedIds, onToggleSeat }: SeatGridProps) => {
         <span className="text-muted-foreground text-xs uppercase tracking-widest">Ingång</span>
         <div className="flex gap-1">
           {seats
-            .filter((s) => s.type === "couple" && coupleSeats.find((c) => c.id === s.id)?.side === "right")
+            .filter((s) => s.type === "couple" && s.id.startsWith("couple-R"))
             .map((s) => (
               <SeatIcon
                 key={s.id}
