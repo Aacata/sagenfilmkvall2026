@@ -30,7 +30,7 @@ const QrScanner = ({ onScan }: QrScannerProps) => {
         await scanner.stop();
       }
     } catch {
-      // ignore
+      // ignore stop errors on iOS when scanner is already stopped
     } finally {
       startedRef.current = false;
       handlingScanRef.current = false;
@@ -39,7 +39,7 @@ const QrScanner = ({ onScan }: QrScannerProps) => {
       try {
         await scanner.clear();
       } catch {
-        // ignore
+        // ignore clear errors
       }
       scannerRef.current = null;
     }
@@ -63,33 +63,29 @@ const QrScanner = ({ onScan }: QrScannerProps) => {
           disableFlip: true,
           aspectRatio: 1,
         },
-        async (decodedText) => {
+        (decodedText) => {
           const now = Date.now();
           const last = lastScanRef.current;
+
           if (handlingScanRef.current) return;
           if (last && last.text === decodedText && now - last.at < 2500) return;
 
-          lastScanRef.current = { text: decodedText, at: now };
           handlingScanRef.current = true;
+          lastScanRef.current = { text: decodedText, at: now };
 
-          try {
-            scanner.pause(true);
-            await Promise.resolve(onScanRef.current(decodedText));
-          } catch (err) {
-            console.error("QR callback error:", err);
-          } finally {
-            handlingScanRef.current = false;
-            if (startedRef.current) {
-              try {
-                scanner.resume();
-              } catch (err) {
-                console.error("QR resume error:", err);
-              }
-            }
-          }
+          void Promise.resolve(onScanRef.current(decodedText))
+            .catch((err) => {
+              console.error("QR callback error:", err);
+            })
+            .finally(() => {
+              window.setTimeout(() => {
+                handlingScanRef.current = false;
+              }, 700);
+            });
         },
         () => {}
       );
+
       startedRef.current = true;
       setRunning(true);
     } catch (err) {
@@ -99,7 +95,7 @@ const QrScanner = ({ onScan }: QrScannerProps) => {
     } finally {
       setStarting(false);
     }
-  }, [running, starting, stopScanner, readerId]);
+  }, [readerId, running, starting, stopScanner]);
 
   useEffect(() => {
     return () => {
