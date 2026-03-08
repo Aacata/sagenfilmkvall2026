@@ -94,11 +94,11 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background px-4 py-8">
       <header className="text-center mb-8">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <Film className="w-8 h-8 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight">Lovelab Bio</h1>
+        <div className="flex items-center justify-center mb-4">
+          <img src={sagenLogo} alt="Sägen Film" className="h-16 object-contain" />
         </div>
-        <p className="text-muted-foreground text-sm">Välj dina platser och boka direkt</p>
+        <h1 className="text-3xl font-bold tracking-tight">Sägen Filmkväll 2026</h1>
+        <p className="text-muted-foreground text-sm mt-1">Välj dina platser och boka direkt</p>
       </header>
 
       <SeatGrid seats={seats} selectedIds={selectedIds} onToggleSeat={toggleSeat} />
