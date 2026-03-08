@@ -9,33 +9,9 @@ interface ScannerTabProps {
   onCheckedIn: () => void;
 }
 
-const playTone = (frequency: number, duration: number, type: OscillatorType = "sine") => {
-  try {
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = type;
-    osc.frequency.value = frequency;
-    gain.gain.value = 0.3;
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration / 1000);
-    osc.stop(ctx.currentTime + duration / 1000);
-  } catch {
-    // Audio not supported
-  }
-};
-
-const feedbackSuccess = () => {
-  playTone(880, 150);
-  setTimeout(() => playTone(1320, 200), 120);
-  try { navigator.vibrate?.([80, 50, 80]); } catch {}
-};
-
-const feedbackError = () => {
-  playTone(280, 300, "square");
-  try { navigator.vibrate?.([200, 100, 200]); } catch {}
+const getAudioContext = () => {
+  const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  return Ctx ? new Ctx() : null;
 };
 
 const ScannerTab = ({ onCheckedIn }: ScannerTabProps) => {
@@ -44,6 +20,56 @@ const ScannerTab = ({ onCheckedIn }: ScannerTabProps) => {
   const [scanResult, setScanResult] = useState<null | { success: boolean; message: string }>(null);
   const processingRef = useRef(false);
   const lastProcessedRef = useRef<{ id: string; at: number } | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  const unlockAudio = useCallback(async () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = getAudioContext();
+    }
+
+    if (audioContextRef.current?.state === "suspended") {
+      await audioContextRef.current.resume();
+    }
+  }, []);
+
+  const playTone = useCallback((frequency: number, duration: number, type: OscillatorType = "sine") => {
+    const ctx = audioContextRef.current;
+    if (!ctx) return;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = type;
+    osc.frequency.value = frequency;
+    gain.gain.value = 0.28;
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    const now = ctx.currentTime;
+    osc.start(now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration / 1000);
+    osc.stop(now + duration / 1000);
+  }, []);
+
+  const feedbackSuccess = useCallback(() => {
+    playTone(880, 140);
+    setTimeout(() => playTone(1320, 180), 110);
+    try {
+      navigator.vibrate?.([60, 40, 80]);
+    } catch {
+      // vibration unsupported
+    }
+  }, [playTone]);
+
+  const feedbackError = useCallback(() => {
+    playTone(280, 260, "square");
+    try {
+      navigator.vibrate?.([180]);
+    } catch {
+      // vibration unsupported
+    }
+  }, [playTone]);
 
   const handleScan = useCallback(
     async (bookingId: string) => {
@@ -90,7 +116,7 @@ const ScannerTab = ({ onCheckedIn }: ScannerTabProps) => {
         processingRef.current = false;
       }
     },
-    [onCheckedIn]
+    [feedbackError, feedbackSuccess, onCheckedIn]
   );
 
   return (
@@ -121,6 +147,7 @@ const ScannerTab = ({ onCheckedIn }: ScannerTabProps) => {
           ) : (
             <Button
               onClick={() => {
+                void unlockAudio();
                 setScanning(true);
                 setScanResult(null);
               }}

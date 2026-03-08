@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
 interface QrScannerProps {
-  onScan: (data: string) => void;
+  onScan: (data: string) => void | Promise<void>;
 }
 
 const QrScanner = ({ onScan }: QrScannerProps) => {
@@ -12,6 +12,7 @@ const QrScanner = ({ onScan }: QrScannerProps) => {
   const onScanRef = useRef(onScan);
   const [readerId] = useState(() => `qr-reader-${crypto.randomUUID()}`);
   const startedRef = useRef(false);
+  const handlingScanRef = useRef(false);
   const lastScanRef = useRef<{ text: string; at: number } | null>(null);
 
   const [starting, setStarting] = useState(false);
@@ -32,6 +33,7 @@ const QrScanner = ({ onScan }: QrScannerProps) => {
       // ignore
     } finally {
       startedRef.current = false;
+      handlingScanRef.current = false;
       setRunning(false);
       setStarting(false);
       try {
@@ -55,17 +57,36 @@ const QrScanner = ({ onScan }: QrScannerProps) => {
     try {
       await scanner.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
+        {
+          fps: 10,
+          qrbox: { width: 240, height: 240 },
+          disableFlip: true,
+          aspectRatio: 1,
+        },
+        async (decodedText) => {
           const now = Date.now();
           const last = lastScanRef.current;
-
-          if (last && last.text === decodedText && now - last.at < 2500) {
-            return;
-          }
+          if (handlingScanRef.current) return;
+          if (last && last.text === decodedText && now - last.at < 2500) return;
 
           lastScanRef.current = { text: decodedText, at: now };
-          onScanRef.current(decodedText);
+          handlingScanRef.current = true;
+
+          try {
+            scanner.pause(true);
+            await Promise.resolve(onScanRef.current(decodedText));
+          } catch (err) {
+            console.error("QR callback error:", err);
+          } finally {
+            handlingScanRef.current = false;
+            if (startedRef.current) {
+              try {
+                scanner.resume();
+              } catch (err) {
+                console.error("QR resume error:", err);
+              }
+            }
+          }
         },
         () => {}
       );
