@@ -13,14 +13,25 @@ interface AdminLoginProps {
 const AdminLogin = ({ onLoading }: AdminLoginProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSignUp, setIsSignUp] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     onLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      toast.error(error.message);
-      onLoading(false);
+    if (isSignUp) {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        toast.error(error.message);
+        onLoading(false);
+      } else {
+        toast.success("Konto skapat! Du loggas in...");
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        toast.error(error.message);
+        onLoading(false);
+      }
     }
   };
 
@@ -30,11 +41,11 @@ const AdminLogin = ({ onLoading }: AdminLoginProps) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-primary" />
-            Admin-inloggning
+            {isSignUp ? "Skapa admin-konto" : "Admin-inloggning"}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="flex flex-col gap-3">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <Input
               type="email"
               placeholder="E-post"
@@ -49,7 +60,10 @@ const AdminLogin = ({ onLoading }: AdminLoginProps) => {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
-            <Button type="submit">Logga in</Button>
+            <Button type="submit">{isSignUp ? "Skapa konto" : "Logga in"}</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setIsSignUp(!isSignUp)}>
+              {isSignUp ? "Har redan ett konto? Logga in" : "Inget konto? Skapa ett"}
+            </Button>
           </form>
         </CardContent>
       </Card>
