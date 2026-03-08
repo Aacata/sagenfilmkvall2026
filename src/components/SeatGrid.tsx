@@ -8,7 +8,7 @@ interface SeatGridProps {
 }
 
 const SeatGrid = ({ seats, selectedIds, onToggleSeat }: SeatGridProps) => {
-  const maxCols = 13;
+  const maxCols = 14;
 
   return (
     <div className="flex flex-col items-center gap-1 w-full max-w-xl mx-auto">
