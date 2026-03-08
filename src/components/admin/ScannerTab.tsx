@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,39 +13,50 @@ const ScannerTab = ({ onCheckedIn }: ScannerTabProps) => {
   const [scanning, setScanning] = useState(false);
   const [loading, setLoading] = useState(false);
   const [scanResult, setScanResult] = useState<null | { success: boolean; message: string }>(null);
+  const processingRef = useRef(false);
+  const lastProcessedRef = useRef<{ id: string; at: number } | null>(null);
 
   const handleScan = useCallback(
     async (bookingId: string) => {
-      setScanning(false);
+      const now = Date.now();
+      const lastProcessed = lastProcessedRef.current;
+
+      if (processingRef.current) return;
+      if (lastProcessed && lastProcessed.id === bookingId && now - lastProcessed.at < 3500) return;
+
+      processingRef.current = true;
+      lastProcessedRef.current = { id: bookingId, at: now };
       setLoading(true);
 
-      const { data: booking } = await supabase
-        .from("bookings")
-        .select("*")
-        .eq("id", bookingId)
-        .single();
+      try {
+        const { data: booking } = await supabase
+          .from("bookings")
+          .select("*")
+          .eq("id", bookingId)
+          .single();
 
-      if (!booking) {
-        setScanResult({ success: false, message: "Ogiltig bokning – hittades inte." });
+        if (!booking) {
+          setScanResult({ success: false, message: "Ogiltig bokning – hittades inte." });
+          return;
+        }
+
+        if (booking.checked_in) {
+          setScanResult({ success: false, message: "Redan incheckad! Biljetten har redan använts." });
+          return;
+        }
+
+        await supabase.from("bookings").update({ checked_in: true }).eq("id", bookingId);
+        await supabase.from("seats").update({ checked_in: true }).in("id", booking.seat_ids);
+
+        setScanResult({
+          success: true,
+          message: `Välkommen! ${booking.seat_ids.length} plats${booking.seat_ids.length > 1 ? "er" : ""} incheckade.`,
+        });
+        onCheckedIn();
+      } finally {
         setLoading(false);
-        return;
+        processingRef.current = false;
       }
-
-      if (booking.checked_in) {
-        setScanResult({ success: false, message: "Redan incheckad! Biljetten har redan använts." });
-        setLoading(false);
-        return;
-      }
-
-      await supabase.from("bookings").update({ checked_in: true }).eq("id", bookingId);
-      await supabase.from("seats").update({ checked_in: true }).in("id", booking.seat_ids);
-
-      setScanResult({
-        success: true,
-        message: `Välkommen! ${booking.seat_ids.length} plats${booking.seat_ids.length > 1 ? "er" : ""} incheckade.`,
-      });
-      setLoading(false);
-      onCheckedIn();
     },
     [onCheckedIn]
   );
@@ -60,13 +71,17 @@ const ScannerTab = ({ onCheckedIn }: ScannerTabProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-          ) : scanning ? (
+          {scanning ? (
             <div className="space-y-3">
               <QrScanner onScan={handleScan} />
+
+              {loading && (
+                <div className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  Verifierar biljett...
+                </div>
+              )}
+
               <Button variant="outline" className="w-full" onClick={() => setScanning(false)}>
                 Avbryt
               </Button>
