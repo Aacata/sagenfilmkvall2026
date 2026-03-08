@@ -1,4 +1,4 @@
-import { rowConfigs, coupleSeats, type Seat } from "@/data/seatLayout";
+import { rowConfigs, type Seat } from "@/data/seatLayout";
 import SeatIcon from "./SeatIcon";
 
 interface SeatGridProps {
