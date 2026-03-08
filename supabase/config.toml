@@ -2,3 +2,6 @@ project_id = "ukopmsfkoexlgtwirkgt"
 
 [functions.send-booking-email]
 verify_jwt = false
+
+[functions.send-cancellation-notice]
+verify_jwt = false
