@@ -10,7 +10,9 @@ interface ScannerTabProps {
 }
 
 const getAudioContext = () => {
-  const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  const Ctx =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   return Ctx ? new Ctx() : null;
 };
 
@@ -27,14 +29,26 @@ const ScannerTab = ({ onCheckedIn }: ScannerTabProps) => {
       audioContextRef.current = getAudioContext();
     }
 
-    if (audioContextRef.current?.state === "suspended") {
-      await audioContextRef.current.resume();
+    const ctx = audioContextRef.current;
+    if (!ctx) return;
+
+    if (ctx.state === "suspended") {
+      await ctx.resume();
     }
+
+    // Prime audio on user gesture (important for iOS Safari)
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    gain.gain.value = 0.0001;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.01);
   }, []);
 
   const playTone = useCallback((frequency: number, duration: number, type: OscillatorType = "sine") => {
     const ctx = audioContextRef.current;
-    if (!ctx) return;
+    if (!ctx || ctx.state !== "running") return;
 
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -58,7 +72,7 @@ const ScannerTab = ({ onCheckedIn }: ScannerTabProps) => {
     try {
       navigator.vibrate?.([60, 40, 80]);
     } catch {
-      // vibration unsupported
+      // unsupported
     }
   }, [playTone]);
 
@@ -67,7 +81,7 @@ const ScannerTab = ({ onCheckedIn }: ScannerTabProps) => {
     try {
       navigator.vibrate?.([180]);
     } catch {
-      // vibration unsupported
+      // unsupported
     }
   }, [playTone]);
 
