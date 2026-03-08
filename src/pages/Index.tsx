@@ -95,7 +95,7 @@ const Index = () => {
     <div className="min-h-screen bg-background px-4 py-8">
       <header className="text-center mb-8">
         <div className="flex items-center justify-center mb-4">
-          <img src={sagenLogo} alt="Sägen Film" className="h-16 object-contain" />
+          <img src={sagenLogo} alt="Sägen Film" className="h-32 object-contain" />
         </div>
         <h1 className="text-3xl font-bold tracking-tight">Sägen Filmkväll 2026</h1>
         <p className="text-muted-foreground text-sm mt-1">Välj dina platser och boka direkt</p>
