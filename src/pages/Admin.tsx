@@ -5,16 +5,51 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import QrScanner from "@/components/QrScanner";
 import { ShieldCheck, ScanLine, CheckCircle, XCircle, LogOut, Loader2 } from "lucide-react";
-
-const ADMIN_PASSWORD = "admin123";
+import { toast } from "sonner";
 
 const Admin = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [scanResult, setScanResult] = useState<null | { success: boolean; message: string }>(null);
   const [scanning, setScanning] = useState(false);
   const [stats, setStats] = useState({ available: 0, booked: 0, checkedIn: 0 });
   const [loading, setLoading] = useState(false);
+
+  // Check auth state
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        setUser({ id: session.user.id, email: session.user.email || "" });
+        // Check admin role
+        const { data } = await supabase.rpc("has_role", {
+          _user_id: session.user.id,
+          _role: "admin",
+        });
+        setIsAdmin(!!data);
+      } else {
+        setUser(null);
+        setIsAdmin(false);
+      }
+      setAuthLoading(false);
+    });
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        setUser({ id: session.user.id, email: session.user.email || "" });
+        const { data } = await supabase.rpc("has_role", {
+          _user_id: session.user.id,
+          _role: "admin",
+        });
+        setIsAdmin(!!data);
+      }
+      setAuthLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const fetchStats = useCallback(async () => {
     const { data } = await supabase.from("seats").select("is_booked, checked_in");
@@ -27,12 +62,23 @@ const Admin = () => {
   }, []);
 
   useEffect(() => {
-    if (isLoggedIn) fetchStats();
-  }, [isLoggedIn, fetchStats]);
+    if (isAdmin) fetchStats();
+  }, [isAdmin, fetchStats]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === ADMIN_PASSWORD) setIsLoggedIn(true);
+    setAuthLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      toast.error(error.message);
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setIsAdmin(false);
   };
 
   const handleScan = useCallback(
@@ -71,7 +117,16 @@ const Admin = () => {
     [fetchStats]
   );
 
-  if (!isLoggedIn) {
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Not logged in
+  if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <Card className="w-full max-w-sm">
@@ -84,10 +139,18 @@ const Admin = () => {
           <CardContent>
             <form onSubmit={handleLogin} className="flex flex-col gap-3">
               <Input
+                type="email"
+                placeholder="E-post"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <Input
                 type="password"
                 placeholder="Lösenord"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                required
               />
               <Button type="submit">Logga in</Button>
             </form>
@@ -97,6 +160,27 @@ const Admin = () => {
     );
   }
 
+  // Logged in but not admin
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <Card className="w-full max-w-sm text-center">
+          <CardContent className="pt-6 flex flex-col items-center gap-4">
+            <XCircle className="w-12 h-12 text-destructive" />
+            <p className="font-medium">Åtkomst nekad</p>
+            <p className="text-sm text-muted-foreground">
+              {user.email} har inte admin-behörighet.
+            </p>
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" /> Logga ut
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Admin dashboard
   return (
     <div className="min-h-screen bg-background px-4 py-8">
       <div className="max-w-2xl mx-auto">
@@ -105,9 +189,12 @@ const Admin = () => {
             <ShieldCheck className="w-6 h-6 text-primary" />
             Admin
           </h1>
-          <Button variant="ghost" size="sm" onClick={() => setIsLoggedIn(false)}>
-            <LogOut className="w-4 h-4 mr-1" /> Logga ut
-          </Button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">{user.email}</span>
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-3 mb-6">
