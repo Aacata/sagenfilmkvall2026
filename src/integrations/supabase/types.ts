@@ -14,7 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bookings: {
+        Row: {
+          checked_in: boolean
+          created_at: string
+          email: string
+          id: string
+          seat_ids: string[]
+        }
+        Insert: {
+          checked_in?: boolean
+          created_at?: string
+          email: string
+          id?: string
+          seat_ids: string[]
+        }
+        Update: {
+          checked_in?: boolean
+          created_at?: string
+          email?: string
+          id?: string
+          seat_ids?: string[]
+        }
+        Relationships: []
+      }
+      seats: {
+        Row: {
+          booked_by_email: string | null
+          booking_id: string | null
+          checked_in: boolean
+          created_at: string
+          id: string
+          is_booked: boolean
+          row_number: number
+          seat_number: number
+          seat_type: string
+          updated_at: string
+        }
+        Insert: {
+          booked_by_email?: string | null
+          booking_id?: string | null
+          checked_in?: boolean
+          created_at?: string
+          id: string
+          is_booked?: boolean
+          row_number: number
+          seat_number: number
+          seat_type?: string
+          updated_at?: string
+        }
+        Update: {
+          booked_by_email?: string | null
+          booking_id?: string | null
+          checked_in?: boolean
+          created_at?: string
+          id?: string
+          is_booked?: boolean
+          row_number?: number
+          seat_number?: number
+          seat_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
