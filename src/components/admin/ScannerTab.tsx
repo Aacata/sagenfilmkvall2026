@@ -9,6 +9,35 @@ interface ScannerTabProps {
   onCheckedIn: () => void;
 }
 
+const playTone = (frequency: number, duration: number, type: OscillatorType = "sine") => {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = frequency;
+    gain.gain.value = 0.3;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration / 1000);
+    osc.stop(ctx.currentTime + duration / 1000);
+  } catch {
+    // Audio not supported
+  }
+};
+
+const feedbackSuccess = () => {
+  playTone(880, 150);
+  setTimeout(() => playTone(1320, 200), 120);
+  try { navigator.vibrate?.([80, 50, 80]); } catch {}
+};
+
+const feedbackError = () => {
+  playTone(280, 300, "square");
+  try { navigator.vibrate?.([200, 100, 200]); } catch {}
+};
+
 const ScannerTab = ({ onCheckedIn }: ScannerTabProps) => {
   const [scanning, setScanning] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -36,11 +65,13 @@ const ScannerTab = ({ onCheckedIn }: ScannerTabProps) => {
           .single();
 
         if (!booking) {
+          feedbackError();
           setScanResult({ success: false, message: "Ogiltig bokning – hittades inte." });
           return;
         }
 
         if (booking.checked_in) {
+          feedbackError();
           setScanResult({ success: false, message: "Redan incheckad! Biljetten har redan använts." });
           return;
         }
@@ -48,6 +79,7 @@ const ScannerTab = ({ onCheckedIn }: ScannerTabProps) => {
         await supabase.from("bookings").update({ checked_in: true }).eq("id", bookingId);
         await supabase.from("seats").update({ checked_in: true }).in("id", booking.seat_ids);
 
+        feedbackSuccess();
         setScanResult({
           success: true,
           message: `Välkommen! ${booking.seat_ids.length} plats${booking.seat_ids.length > 1 ? "er" : ""} incheckade.`,
