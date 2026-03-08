@@ -12,9 +12,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { bookingId, email, seatLabels } = await req.json();
+    const { bookingId, email, seatLabels, appUrl } = await req.json();
 
-    if (!bookingId || !email || !seatLabels) {
+    if (!bookingId || !email || !seatLabels || !appUrl) {
       return new Response(JSON.stringify({ error: "Missing fields" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -29,8 +29,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Generate QR code as data URL using a public API
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(bookingId)}`;
+    const cancelUrl = `${appUrl}/cancel/${bookingId}`;
 
     const seatsHtml = seatLabels
       .map((s: string) => `<span style="display:inline-block;background:#e0e7ff;color:#3730a3;padding:4px 10px;border-radius:6px;margin:2px;font-size:14px;">${s}</span>`)
@@ -54,6 +54,11 @@ Deno.serve(async (req) => {
         <p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:24px;">
           Boknings-ID: ${bookingId}
         </p>
+
+        <div style="text-align:center;margin-top:32px;padding-top:24px;border-top:1px solid #e2e8f0;">
+          <p style="color:#64748b;font-size:13px;margin-bottom:12px;">Ångrar du dig?</p>
+          <a href="${cancelUrl}" style="display:inline-block;background:#ef4444;color:#ffffff;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:500;">Avboka bokning</a>
+        </div>
       </div>
     `;
 
