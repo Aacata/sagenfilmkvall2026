@@ -18,15 +18,14 @@ export interface RowConfig {
 }
 
 export const rowConfigs: RowConfig[] = [
-  { row: 1, seats: [{ type: "wheelchair", count: 1 }, { type: "empty", count: 2 }, { type: "vip", count: 7 }], offset: 1 },
-  { row: 2, seats: [{ type: "standard", count: 12 }], offset: 0 },
-  { row: 3, seats: [{ type: "standard", count: 13 }], offset: 0 },
-  { row: 4, seats: [{ type: "standard", count: 12 }], offset: 1 },
-  { row: 5, seats: [{ type: "standard", count: 12 }], offset: 1 },
-  { row: 6, seats: [{ type: "standard", count: 13 }], offset: 0 },
-  { row: 7, seats: [{ type: "standard", count: 13 }], offset: 0 },
-  { row: 8, seats: [{ type: "standard", count: 12 }], offset: 0 },
-  { row: 9, seats: [{ type: "standard", count: 11 }], offset: 1 },
+  { row: 1, seats: [{ type: "wheelchair", count: 1 }, { type: "vip", count: 7 }], offset: 3 },
+  { row: 2, seats: [{ type: "standard", count: 14 }], offset: 0 },
+  { row: 3, seats: [{ type: "standard", count: 14 }], offset: 0 },
+  { row: 4, seats: [{ type: "standard", count: 13 }], offset: 0 },
+  { row: 5, seats: [{ type: "standard", count: 13 }], offset: 0 },
+  { row: 6, seats: [{ type: "standard", count: 12 }], offset: 1 },
+  { row: 7, seats: [{ type: "standard", count: 12 }], offset: 1 },
+  { row: 8, seats: [{ type: "standard", count: 8 }], offset: 3 },
 ];
 
 export function dbSeatToSeat(row: {
