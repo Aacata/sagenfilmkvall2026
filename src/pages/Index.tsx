@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { dbSeatToSeat, type Seat } from "@/data/seatLayout";
 import SeatGrid from "@/components/SeatGrid";
