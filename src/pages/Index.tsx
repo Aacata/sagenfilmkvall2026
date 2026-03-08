@@ -5,7 +5,8 @@ import { dbSeatToSeat, type Seat } from "@/data/seatLayout";
 import SeatGrid from "@/components/SeatGrid";
 import BookingPanel from "@/components/BookingPanel";
 import { toast } from "sonner";
-import { Film, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import sagenLogo from "@/assets/sagen-logo.png";
 
 const Index = () => {
   const [seats, setSeats] = useState<Seat[]>([]);
