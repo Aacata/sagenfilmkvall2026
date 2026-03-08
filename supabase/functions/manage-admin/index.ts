@@ -17,84 +17,54 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Verify the caller is admin using getClaims
+    // Verify caller
     const authHeader = req.headers.get("Authorization")!;
     const token = authHeader.replace("Bearer ", "");
-    
     const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
-    
     if (claimsError || !claimsData?.claims) {
       return new Response(JSON.stringify({ error: "Ej autentiserad" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const callerId = claimsData.claims.sub;
-
-    // Check admin role
-    const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
-      _user_id: callerId,
-      _role: "admin",
-    });
-
+    const callerId = claimsData.claims.sub as string;
+    const { data: isAdmin } = await supabaseAdmin.rpc("has_role", { _user_id: callerId, _role: "admin" });
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: "Ej behörig" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const { action, email, roleId } = await req.json();
 
     if (action === "add") {
-      const defaultPassword = "Admin1234!";
+      let userId: string;
 
-      // Try to create the user
+      // Try creating the user with default password
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email,
-        password: defaultPassword,
+        password: "Admin1234!",
         email_confirm: true,
       });
 
-      let userId: string;
-
       if (createError) {
-        // User might already exist - find them via SQL (admin API has NULL column issues)
-        const { data: existingUsers } = await supabaseAdmin
-          .from("_temp_find_user")
-          .select("id")
-          .eq("email", email);
-        
-        // Fallback: query auth.users directly via RPC won't work, so let's try a different approach
-        // Use the service role to query auth.users
-        const { data: foundUser, error: findError } = await supabaseAdmin.rpc("find_user_by_email_fn", { _email: email });
-        
-        if (findError || !foundUser) {
-          // Last resort: try raw approach - the user likely exists but we need their ID
-          // Since createUser failed, let's check if it's a "already registered" error
-          if (createError.message.includes("already") || createError.message.includes("exists") || createError.message.includes("duplicate")) {
-            return new Response(JSON.stringify({ error: "Användaren finns redan men kunde inte hittas. Kontrollera e-postadressen." }), {
-              status: 400,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-          return new Response(JSON.stringify({ error: createError.message }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+        // User exists - find via DB function
+        const { data: foundId, error: findErr } = await supabaseAdmin.rpc("find_user_by_email_fn", { _email: email });
+        if (findErr || !foundId) {
+          return new Response(JSON.stringify({ error: "Användaren kunde inte hittas. Fel: " + (createError.message) }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
-        userId = foundUser;
+        userId = foundId;
       } else {
         userId = newUser.user.id;
-        
-        // Fix potential NULL columns for the new user
-        // This prevents the "email_change NULL scan" error
-        await fixNullColumns(supabaseAdmin, userId);
       }
+
+      // Fix NULL columns to prevent GoTrue scan errors
+      await supabaseAdmin.rpc("fix_auth_user_nulls", { _user_id: userId });
 
       // Check if already admin
       const { data: existing } = await supabaseAdmin
@@ -106,15 +76,13 @@ Deno.serve(async (req) => {
 
       if (existing) {
         return new Response(JSON.stringify({ error: "Användaren är redan admin." }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
       const { error: insertError } = await supabaseAdmin
         .from("user_roles")
         .insert({ user_id: userId, role: "admin" });
-
       if (insertError) throw insertError;
 
       return new Response(JSON.stringify({ success: true, created: !createError }), {
@@ -131,8 +99,7 @@ Deno.serve(async (req) => {
 
       if (role?.user_id === callerId) {
         return new Response(JSON.stringify({ error: "Du kan inte ta bort dig själv som admin." }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
@@ -140,7 +107,6 @@ Deno.serve(async (req) => {
         .from("user_roles")
         .delete()
         .eq("id", roleId);
-
       if (deleteError) throw deleteError;
 
       return new Response(JSON.stringify({ success: true }), {
@@ -149,23 +115,11 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ error: "Ogiltig åtgärd" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
-
-async function fixNullColumns(supabaseAdmin: any, userId: string) {
-  // Fix NULL string columns that cause GoTrue scan errors
-  try {
-    const { error } = await supabaseAdmin.rpc("fix_auth_user_nulls", { _user_id: userId });
-    if (error) console.error("Could not fix null columns:", error.message);
-  } catch (e) {
-    console.error("fixNullColumns error:", e);
-  }
-}
