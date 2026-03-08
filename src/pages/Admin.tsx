@@ -126,6 +126,10 @@ const Admin = () => {
           <TabsContent value="admins">
             <AdminDelegateTab />
           </TabsContent>
+
+          <TabsContent value="password">
+            <ChangePasswordTab />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
