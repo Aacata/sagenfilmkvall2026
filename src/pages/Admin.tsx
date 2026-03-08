@@ -112,6 +112,7 @@ const Admin = () => {
             <TabsTrigger value="scanner" className="flex-1">Insläpp</TabsTrigger>
             <TabsTrigger value="bookings" className="flex-1">Bokningar</TabsTrigger>
             <TabsTrigger value="admins" className="flex-1">Admins</TabsTrigger>
+            <TabsTrigger value="password" className="flex-1">Lösenord</TabsTrigger>
           </TabsList>
 
           <TabsContent value="scanner">
