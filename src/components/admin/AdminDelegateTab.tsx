@@ -37,15 +37,6 @@ const AdminDelegateTab = () => {
     if (!newEmail.trim()) return;
     setAdding(true);
 
-    // First, sign up the user (or they may already exist)
-    // We need to find the user by email - we'll use an edge function approach
-    // For simplicity, we create the user via signup if they don't exist
-    // But we actually need the user_id. Let's use a different approach:
-    // We'll create the admin entry when they sign up, using an edge function.
-    
-    // Actually, the simplest approach: try to find user by listing auth users via edge function
-    // OR: create a pending_admins approach. Let's use edge function.
-    
     const { data, error } = await supabase.functions.invoke("manage-admin", {
       body: { action: "add", email: newEmail.trim() },
     });
@@ -53,7 +44,10 @@ const AdminDelegateTab = () => {
     if (error || data?.error) {
       toast.error(data?.error || "Kunde inte lägga till admin");
     } else {
-      toast.success(`${newEmail} har lagts till som admin`);
+      const msg = data?.created
+        ? `Konto skapat för ${newEmail} med lösenord Admin1234! och admin-rättigheter tilldelade.`
+        : `${newEmail} har fått admin-rättigheter.`;
+      toast.success(msg);
       setNewEmail("");
       fetchAdmins();
     }
@@ -62,11 +56,11 @@ const AdminDelegateTab = () => {
 
   const handleRemoveAdmin = async (admin: AdminUser) => {
     setRemoving(admin.id);
-    const { error } = await supabase.functions.invoke("manage-admin", {
+    const { data, error } = await supabase.functions.invoke("manage-admin", {
       body: { action: "remove", roleId: admin.id },
     });
-    if (error) {
-      toast.error("Kunde inte ta bort admin");
+    if (error || data?.error) {
+      toast.error(data?.error || "Kunde inte ta bort admin");
     } else {
       toast.success("Admin borttagen");
       fetchAdmins();
@@ -129,7 +123,7 @@ const AdminDelegateTab = () => {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Nya admins måste först skapa ett konto. Ange deras e-postadress ovan så får de admin-rättigheter vid inloggning.
+          Ange e-postadressen för den nya adminen. Om inget konto finns skapas ett automatiskt med lösenordet <strong>Admin1234!</strong>
         </p>
       </CardContent>
     </Card>
