@@ -12,6 +12,7 @@ const QrScanner = ({ onScan }: QrScannerProps) => {
   const onScanRef = useRef(onScan);
   const [readerId] = useState(() => `qr-reader-${crypto.randomUUID()}`);
   const startedRef = useRef(false);
+  const lastScanRef = useRef<{ text: string; at: number } | null>(null);
 
   const [starting, setStarting] = useState(false);
   const [running, setRunning] = useState(false);
@@ -55,9 +56,16 @@ const QrScanner = ({ onScan }: QrScannerProps) => {
       await scanner.start(
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 250, height: 250 } },
-        async (decodedText) => {
+        (decodedText) => {
+          const now = Date.now();
+          const last = lastScanRef.current;
+
+          if (last && last.text === decodedText && now - last.at < 2500) {
+            return;
+          }
+
+          lastScanRef.current = { text: decodedText, at: now };
           onScanRef.current(decodedText);
-          await stopScanner();
         },
         () => {}
       );
