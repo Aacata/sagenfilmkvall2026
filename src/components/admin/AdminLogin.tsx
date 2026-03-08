@@ -41,11 +41,11 @@ const AdminLogin = ({ onLoading }: AdminLoginProps) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-primary" />
-            Admin-inloggning
+            {isSignUp ? "Skapa admin-konto" : "Admin-inloggning"}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="flex flex-col gap-3">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <Input
               type="email"
               placeholder="E-post"
@@ -60,7 +60,10 @@ const AdminLogin = ({ onLoading }: AdminLoginProps) => {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
-            <Button type="submit">Logga in</Button>
+            <Button type="submit">{isSignUp ? "Skapa konto" : "Logga in"}</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setIsSignUp(!isSignUp)}>
+              {isSignUp ? "Har redan ett konto? Logga in" : "Inget konto? Skapa ett"}
+            </Button>
           </form>
         </CardContent>
       </Card>
