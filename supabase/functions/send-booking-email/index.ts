@@ -47,12 +47,12 @@ Deno.serve(async (req) => {
       .map((s: string) => `<span style="display:inline-block;background:#e0e7ff;color:#3730a3;padding:4px 10px;border-radius:6px;margin:2px;font-size:14px;">${s}</span>`)
       .join(" ");
 
-    const logoUrl = "https://ukopmsfkoexlgtwirkgt.supabase.co/storage/v1/object/public/email-assets/sagen-logo.png";
+    const logoUrl = "https://ukopmsfkoexlgtwirkgt.supabase.co/storage/v1/object/public/email-assets/sagen-logo-email.jpg";
 
     const html = `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#ffffff;">
-        <div style="text-align:center;margin-bottom:16px;">
-          <img src="${logoUrl}" alt="Sägen Film" width="180" style="max-width:180px;height:auto;" />
+        <div style="text-align:center;margin-bottom:16px;border-radius:12px;overflow:hidden;">
+          <img src="${logoUrl}" alt="Sägen Film" width="480" style="max-width:100%;height:auto;display:block;" />
         </div>
         <h2 style="text-align:center;color:#475569;font-size:18px;font-weight:normal;">Din bokning är bekräftad!</h2>
         
