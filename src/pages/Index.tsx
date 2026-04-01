@@ -48,32 +48,19 @@ const Index = () => {
 
   const handleBook = useCallback(
     async (email: string) => {
-      // Create booking
-      const { data: booking, error: bookingError } = await supabase
-        .from("bookings")
-        .insert({ email, seat_ids: selectedIds })
-        .select("id")
-        .single();
+      // Create booking atomically via secure function
+      const { data: result, error: rpcError } = await supabase.rpc("create_booking_secure", {
+        _email: email,
+        _seat_ids: selectedIds,
+      });
 
-      if (bookingError || !booking) {
-        toast.error("Bokningen misslyckades");
+      const res = result as any;
+      if (rpcError || res?.error) {
+        toast.error(res?.error || "Bokningen misslyckades");
         return;
       }
 
-      // Update seats
-      const { error: seatError } = await supabase
-        .from("seats")
-        .update({
-          is_booked: true,
-          booked_by_email: email,
-          booking_id: booking.id,
-        })
-        .in("id", selectedIds);
-
-      if (seatError) {
-        toast.error("Kunde inte uppdatera platser");
-        return;
-      }
+      const bookingId = res.booking_id;
 
       // Build seat labels for email
       const seatLabels = seats
