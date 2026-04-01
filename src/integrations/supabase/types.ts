@@ -97,42 +97,7 @@ export type Database = {
       }
     }
     Views: {
-      seats_public: {
-        Row: {
-          booking_id: string | null
-          checked_in: boolean | null
-          created_at: string | null
-          id: string | null
-          is_booked: boolean | null
-          row_number: number | null
-          seat_number: number | null
-          seat_type: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          booking_id?: string | null
-          checked_in?: boolean | null
-          created_at?: string | null
-          id?: string | null
-          is_booked?: boolean | null
-          row_number?: number | null
-          seat_number?: number | null
-          seat_type?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          booking_id?: string | null
-          checked_in?: boolean | null
-          created_at?: string | null
-          id?: string | null
-          is_booked?: boolean | null
-          row_number?: number | null
-          seat_number?: number | null
-          seat_type?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       cancel_booking: { Args: { _booking_id: string }; Returns: Json }
@@ -154,6 +119,20 @@ export type Database = {
           email: string
           id: string
           seat_ids: string[]
+        }[]
+      }
+      get_seats_public: {
+        Args: never
+        Returns: {
+          booking_id: string
+          checked_in: boolean
+          created_at: string
+          id: string
+          is_booked: boolean
+          row_number: number
+          seat_number: number
+          seat_type: string
+          updated_at: string
         }[]
       }
       has_role: {
