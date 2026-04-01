@@ -27,13 +27,9 @@ const Index = () => {
 
   useEffect(() => {
     fetchSeats();
-    const channel = supabase
-      .channel("seats-realtime")
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "seats" }, () => {
-        fetchSeats();
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    // Poll every 5 seconds for seat updates (realtime disabled for security)
+    const interval = setInterval(fetchSeats, 5000);
+    return () => clearInterval(interval);
   }, [fetchSeats]);
 
   const toggleSeat = useCallback((id: string) => {
