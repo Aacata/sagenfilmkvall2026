@@ -17,7 +17,7 @@ const Index = () => {
 
   const fetchSeats = useCallback(async () => {
     const { data, error } = await supabase
-      .from("seats")
+      .from("seats_public" as any)
       .select("*")
       .order("row_number")
       .order("seat_number");
@@ -25,7 +25,7 @@ const Index = () => {
       toast.error("Kunde inte ladda platser");
       return;
     }
-    setSeats(data.map(dbSeatToSeat));
+    setSeats((data as any[]).map(dbSeatToSeat));
     setLoading(false);
   }, []);
 

@@ -14,12 +14,11 @@ const Booking = () => {
   useEffect(() => {
     if (!id) return;
     supabase
-      .from("bookings")
-      .select("email, seat_ids")
-      .eq("id", id)
-      .single()
+      .rpc("get_booking_by_id", { _booking_id: id })
       .then(({ data }) => {
-        setBooking(data);
+        if (data && data.length > 0) {
+          setBooking({ email: data[0].email, seat_ids: data[0].seat_ids });
+        }
         setLoading(false);
       });
   }, [id]);
