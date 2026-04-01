@@ -97,11 +97,61 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      seats_public: {
+        Row: {
+          booking_id: string | null
+          checked_in: boolean | null
+          created_at: string | null
+          id: string | null
+          is_booked: boolean | null
+          row_number: number | null
+          seat_number: number | null
+          seat_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          booking_id?: string | null
+          checked_in?: boolean | null
+          created_at?: string | null
+          id?: string | null
+          is_booked?: boolean | null
+          row_number?: number | null
+          seat_number?: number | null
+          seat_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          booking_id?: string | null
+          checked_in?: boolean | null
+          created_at?: string | null
+          id?: string | null
+          is_booked?: boolean | null
+          row_number?: number | null
+          seat_number?: number | null
+          seat_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      cancel_booking: { Args: { _booking_id: string }; Returns: Json }
+      cancel_seat: {
+        Args: { _booking_id: string; _seat_id: string }
+        Returns: Json
+      }
       find_user_by_email_fn: { Args: { _email: string }; Returns: string }
       fix_auth_user_nulls: { Args: { _user_id: string }; Returns: undefined }
+      get_booking_by_id: {
+        Args: { _booking_id: string }
+        Returns: {
+          checked_in: boolean
+          created_at: string
+          email: string
+          id: string
+          seat_ids: string[]
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
