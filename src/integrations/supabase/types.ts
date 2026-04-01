@@ -140,6 +140,10 @@ export type Database = {
         Args: { _booking_id: string; _seat_id: string }
         Returns: Json
       }
+      create_booking_secure: {
+        Args: { _email: string; _seat_ids: string[] }
+        Returns: Json
+      }
       find_user_by_email_fn: { Args: { _email: string }; Returns: string }
       fix_auth_user_nulls: { Args: { _user_id: string }; Returns: undefined }
       get_booking_by_id: {
