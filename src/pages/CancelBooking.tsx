@@ -35,9 +35,9 @@ const CancelBooking = () => {
     setBooking({ email: b.email, seat_ids: b.seat_ids });
 
     // Fetch seat details from public view
-    const { data: seats } = await supabase
+    const { data: seats } = await (supabase
       .from("seats_public" as any)
-      .select("id, row_number, seat_number, seat_type")
+      .select("id, row_number, seat_number, seat_type") as any)
       .in("id", b.seat_ids);
 
     setSeatDetails((seats as SeatInfo[]) || []);
