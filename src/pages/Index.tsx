@@ -78,7 +78,7 @@ const Index = () => {
 
       setSelectedIds([]);
       toast.success("Bokning bekräftad! En bekräftelse skickas till din e-post.");
-      navigate(`/booking/${booking.id}`);
+      navigate(`/booking/${bookingId}`);
     },
     [selectedIds, seats, navigate]
   );
