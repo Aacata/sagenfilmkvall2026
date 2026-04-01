@@ -16,11 +16,7 @@ const Index = () => {
   const navigate = useNavigate();
 
   const fetchSeats = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("seats_public" as any)
-      .select("*")
-      .order("row_number")
-      .order("seat_number");
+    const { data, error } = await supabase.rpc("get_seats_public");
     if (error) {
       toast.error("Kunde inte ladda platser");
       return;

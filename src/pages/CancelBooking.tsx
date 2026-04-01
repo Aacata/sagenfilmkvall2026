@@ -35,12 +35,11 @@ const CancelBooking = () => {
     setBooking({ email: b.email, seat_ids: b.seat_ids });
 
     // Fetch seat details from public view
-    const { data: seats } = await (supabase
-      .from("seats_public" as any)
-      .select("id, row_number, seat_number, seat_type") as any)
-      .in("id", b.seat_ids);
+    // Fetch seat details via secure function
+    const { data: allSeats } = await supabase.rpc("get_seats_public");
+    const seats = (allSeats as any[] || []).filter((s: any) => b.seat_ids.includes(s.id));
 
-    setSeatDetails((seats as SeatInfo[]) || []);
+    setSeatDetails(seats as SeatInfo[]);
     setStatus("confirm");
   };
 
