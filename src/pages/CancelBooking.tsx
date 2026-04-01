@@ -24,26 +24,22 @@ const CancelBooking = () => {
 
   const fetchBooking = async () => {
     if (!id) return;
-    const { data, error } = await supabase
-      .from("bookings")
-      .select("email, seat_ids")
-      .eq("id", id)
-      .single();
+    const { data, error } = await supabase.rpc("get_booking_by_id", { _booking_id: id });
 
-    if (error || !data) {
+    if (error || !data || data.length === 0) {
       setStatus("not_found");
       return;
     }
 
-    setBooking(data);
+    const b = data[0];
+    setBooking({ email: b.email, seat_ids: b.seat_ids });
 
-    // Fetch seat details
-    const { data: seats } = await supabase
-      .from("seats")
-      .select("id, row_number, seat_number, seat_type")
-      .in("id", data.seat_ids);
+    // Fetch seat details from public view
+    // Fetch seat details via secure function
+    const { data: allSeats } = await supabase.rpc("get_seats_public");
+    const seats = (allSeats as any[] || []).filter((s: any) => b.seat_ids.includes(s.id));
 
-    setSeatDetails(seats || []);
+    setSeatDetails(seats as SeatInfo[]);
     setStatus("confirm");
   };
 
@@ -54,7 +50,7 @@ const CancelBooking = () => {
   const sendAdminNotification = async (email: string, cancelledSeatLabels: string[], allCancelled: boolean) => {
     supabase.functions
       .invoke("send-cancellation-notice", {
-        body: { 
+        body: {
           adminEmail: "hellosagen@gmail.com",
           userEmail: email,
           seatLabels: cancelledSeatLabels,
@@ -72,31 +68,25 @@ const CancelBooking = () => {
 
     const seat = seatDetails.find((s) => s.id === seatId);
     const seatLabel = seat ? `Rad ${seat.row_number}, Plats ${seat.seat_number}` : seatId;
-    const remainingSeats = booking.seat_ids.filter((sid) => sid !== seatId);
 
-    // Free the seat
-    const { error: seatError } = await supabase
-      .from("seats")
-      .update({ is_booked: false, booked_by_email: null, booking_id: null, checked_in: false })
-      .eq("id", seatId);
+    const { data, error } = await supabase.rpc("cancel_seat", {
+      _booking_id: id,
+      _seat_id: seatId,
+    });
 
-    if (seatError) {
+    if (error || (data as any)?.error) {
       toast.error("Kunde inte avboka platsen");
       return;
     }
 
-    if (remainingSeats.length === 0) {
-      // Delete entire booking
-      await supabase.from("bookings").delete().eq("id", id);
-      await sendAdminNotification(booking.email, [seatLabel], true);
-      setCancelledSeats((prev) => [...prev, seatId]);
+    const result = data as any;
+    await sendAdminNotification(result.email, [seatLabel], result.booking_deleted);
+    setCancelledSeats((prev) => [...prev, seatId]);
+
+    if (result.booking_deleted) {
       setStatus("done");
     } else {
-      // Update booking with remaining seats
-      await supabase.from("bookings").update({ seat_ids: remainingSeats }).eq("id", id);
-      await sendAdminNotification(booking.email, [seatLabel], false);
-      setCancelledSeats((prev) => [...prev, seatId]);
-      setBooking({ ...booking, seat_ids: remainingSeats });
+      setBooking({ ...booking, seat_ids: booking.seat_ids.filter((sid) => sid !== seatId) });
       toast.success(`${seatLabel} avbokad`);
     }
   };
@@ -109,19 +99,15 @@ const CancelBooking = () => {
       .filter((s) => booking.seat_ids.includes(s.id))
       .map((s) => `Rad ${s.row_number}, Plats ${s.seat_number}`);
 
-    const { error: seatError } = await supabase
-      .from("seats")
-      .update({ is_booked: false, booked_by_email: null, booking_id: null, checked_in: false })
-      .in("id", booking.seat_ids);
+    const { data, error } = await supabase.rpc("cancel_booking", { _booking_id: id });
 
-    if (seatError) {
+    if (error || (data as any)?.error) {
       setStatus("confirm");
       toast.error("Kunde inte avboka platserna");
       return;
     }
 
-    await supabase.from("bookings").delete().eq("id", id);
-    await sendAdminNotification(booking.email, labels, true);
+    await sendAdminNotification((data as any).email, labels, true);
     setStatus("done");
   };
 
@@ -162,7 +148,7 @@ const CancelBooking = () => {
           {status === "confirm" && booking && (
             <>
               <p className="text-muted-foreground text-sm">{booking.email}</p>
-              
+
               {activeSeats.length > 1 && (
                 <p className="text-muted-foreground text-sm">
                   Klicka på <X className="w-3 h-3 inline" /> för att avboka en enskild plats, eller avboka alla.

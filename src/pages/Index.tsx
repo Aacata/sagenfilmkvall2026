@@ -16,28 +16,20 @@ const Index = () => {
   const navigate = useNavigate();
 
   const fetchSeats = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("seats")
-      .select("*")
-      .order("row_number")
-      .order("seat_number");
+    const { data, error } = await supabase.rpc("get_seats_public");
     if (error) {
       toast.error("Kunde inte ladda platser");
       return;
     }
-    setSeats(data.map(dbSeatToSeat));
+    setSeats((data as any[]).map(dbSeatToSeat));
     setLoading(false);
   }, []);
 
   useEffect(() => {
     fetchSeats();
-    const channel = supabase
-      .channel("seats-realtime")
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "seats" }, () => {
-        fetchSeats();
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    // Poll every 5 seconds for seat updates (realtime disabled for security)
+    const interval = setInterval(fetchSeats, 5000);
+    return () => clearInterval(interval);
   }, [fetchSeats]);
 
   const toggleSeat = useCallback((id: string) => {
@@ -48,32 +40,19 @@ const Index = () => {
 
   const handleBook = useCallback(
     async (email: string) => {
-      // Create booking
-      const { data: booking, error: bookingError } = await supabase
-        .from("bookings")
-        .insert({ email, seat_ids: selectedIds })
-        .select("id")
-        .single();
+      // Create booking atomically via secure function
+      const { data: result, error: rpcError } = await supabase.rpc("create_booking_secure", {
+        _email: email,
+        _seat_ids: selectedIds,
+      });
 
-      if (bookingError || !booking) {
-        toast.error("Bokningen misslyckades");
+      const res = result as any;
+      if (rpcError || res?.error) {
+        toast.error(res?.error || "Bokningen misslyckades");
         return;
       }
 
-      // Update seats
-      const { error: seatError } = await supabase
-        .from("seats")
-        .update({
-          is_booked: true,
-          booked_by_email: email,
-          booking_id: booking.id,
-        })
-        .in("id", selectedIds);
-
-      if (seatError) {
-        toast.error("Kunde inte uppdatera platser");
-        return;
-      }
+      const bookingId = res.booking_id;
 
       // Build seat labels for email
       const seatLabels = seats
@@ -83,7 +62,7 @@ const Index = () => {
       // Send confirmation email (fire-and-forget)
       supabase.functions
         .invoke("send-booking-email", {
-          body: { bookingId: booking.id, email, seatLabels, appUrl: window.location.origin },
+          body: { bookingId, email, seatLabels, appUrl: window.location.origin },
         })
         .then(({ error }) => {
           if (error) console.error("Email send error:", error);
@@ -91,7 +70,7 @@ const Index = () => {
 
       setSelectedIds([]);
       toast.success("Bokning bekräftad! En bekräftelse skickas till din e-post.");
-      navigate(`/booking/${booking.id}`);
+      navigate(`/booking/${bookingId}`);
     },
     [selectedIds, seats, navigate]
   );

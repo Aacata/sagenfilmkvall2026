@@ -100,8 +100,41 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cancel_booking: { Args: { _booking_id: string }; Returns: Json }
+      cancel_seat: {
+        Args: { _booking_id: string; _seat_id: string }
+        Returns: Json
+      }
+      create_booking_secure: {
+        Args: { _email: string; _seat_ids: string[] }
+        Returns: Json
+      }
       find_user_by_email_fn: { Args: { _email: string }; Returns: string }
       fix_auth_user_nulls: { Args: { _user_id: string }; Returns: undefined }
+      get_booking_by_id: {
+        Args: { _booking_id: string }
+        Returns: {
+          checked_in: boolean
+          created_at: string
+          email: string
+          id: string
+          seat_ids: string[]
+        }[]
+      }
+      get_seats_public: {
+        Args: never
+        Returns: {
+          booking_id: string
+          checked_in: boolean
+          created_at: string
+          id: string
+          is_booked: boolean
+          row_number: number
+          seat_number: number
+          seat_type: string
+          updated_at: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
