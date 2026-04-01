@@ -70,7 +70,7 @@ const Index = () => {
       // Send confirmation email (fire-and-forget)
       supabase.functions
         .invoke("send-booking-email", {
-          body: { bookingId: booking.id, email, seatLabels, appUrl: window.location.origin },
+          body: { bookingId, email, seatLabels, appUrl: window.location.origin },
         })
         .then(({ error }) => {
           if (error) console.error("Email send error:", error);
