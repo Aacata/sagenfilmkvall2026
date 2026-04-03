@@ -38,7 +38,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { action, email, roleId } = await req.json();
+    const body = await req.json();
+    const { action, email, roleId } = body;
+
+    if (action === "list") {
+      const { data: roles, error: rolesErr } = await supabaseAdmin
+        .from("user_roles")
+        .select("id, user_id")
+        .eq("role", "admin");
+      if (rolesErr) throw rolesErr;
+
+      const adminsWithEmail = await Promise.all(
+        (roles || []).map(async (r: { id: string; user_id: string }) => {
+          const { data } = await supabaseAdmin.auth.admin.getUserById(r.user_id);
+          return { id: r.id, user_id: r.user_id, email: data?.user?.email || "okänd" };
+        })
+      );
+
+      return new Response(JSON.stringify({ admins: adminsWithEmail }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (action === "add") {
       let userId: string;
