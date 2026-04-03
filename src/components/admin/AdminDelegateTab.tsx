@@ -20,11 +20,12 @@ const AdminDelegateTab = () => {
   const [removing, setRemoving] = useState<string | null>(null);
 
   const fetchAdmins = async () => {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("id, user_id")
-      .eq("role", "admin");
-    setAdmins(data || []);
+    const { data, error } = await supabase.functions.invoke("manage-admin", {
+      body: { action: "list" },
+    });
+    if (!error && data?.admins) {
+      setAdmins(data.admins);
+    }
     setLoading(false);
   };
 
