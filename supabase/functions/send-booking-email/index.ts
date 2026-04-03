@@ -22,7 +22,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const GMAIL_APP_PASSWORD = Deno.env.get("GMAIL_APP_PASSWORD");
+    const rawGmailAppPassword = Deno.env.get("GMAIL_APP_PASSWORD");
+    const GMAIL_APP_PASSWORD = rawGmailAppPassword?.replace(/\s+/g, "");
     if (!GMAIL_APP_PASSWORD) {
       return new Response(JSON.stringify({ error: "GMAIL_APP_PASSWORD not set" }), {
         status: 500,
@@ -89,9 +90,25 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("Edge function error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    const errorCode =
+      typeof err === "object" && err !== null && "code" in err
+        ? String((err as { code?: unknown }).code ?? "")
+        : "";
+    const isGmailAuthError =
+      errorCode === "EAUTH" || errorMessage.includes("Invalid login: 535");
+
+    return new Response(
+      JSON.stringify({
+        error: isGmailAuthError
+          ? "Gmail authentication failed. Generate a new 16-character app password and save it without spaces."
+          : errorMessage,
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });
