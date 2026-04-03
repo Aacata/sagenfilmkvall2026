@@ -106,7 +106,7 @@ const AdminDelegateTab = () => {
               key={admin.id}
               className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 border border-border"
             >
-              <p className="text-sm font-mono">{admin.user_id.slice(0, 8)}…</p>
+              <p className="text-sm">{admin.email || admin.user_id.slice(0, 8) + "…"}</p>
               <Button
                 variant="destructive"
                 size="sm"
