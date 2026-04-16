@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       },
     });
 
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(bookingId)}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=20&qzone=4&ecc=H&format=png&data=${encodeURIComponent(bookingId)}`;
     const cancelUrl = `${appUrl}/cancel/${bookingId}`;
 
     const seatsHtml = seatLabels
@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
         <h2 style="text-align:center;color:#475569;font-size:18px;font-weight:normal;">Din bokning är bekräftad!</h2>
         
         <div style="text-align:center;margin:24px 0;">
-          <img src="${qrUrl}" alt="QR-kod för bokning" width="250" height="250" style="border-radius:12px;" />
+          <img src="${qrUrl}" alt="QR-kod för bokning" width="280" height="280" style="border-radius:12px;background:#ffffff;padding:16px;border:1px solid #e2e8f0;" />
         </div>
         
         <p style="text-align:center;color:#64748b;font-size:14px;">Visa denna QR-kod vid ingången</p>
