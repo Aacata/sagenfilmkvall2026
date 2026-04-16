@@ -58,10 +58,16 @@ const QrScanner = ({ onScan }: QrScannerProps) => {
       await scanner.start(
         { facingMode: "environment" },
         {
-          fps: 10,
-          qrbox: { width: 240, height: 240 },
-          disableFlip: true,
+          fps: 25,
+          qrbox: { width: 280, height: 280 },
+          disableFlip: false,
           aspectRatio: 1,
+          videoConstraints: {
+            facingMode: "environment",
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet],
+          },
         },
         (decodedText) => {
           const now = Date.now();
