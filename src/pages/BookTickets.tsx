@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, Plus, Ticket, Trash2 } from "lucide-react";
+import { ArrowLeft, Clock, Loader2, Plus, Ticket, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import sagenLogo from "@/assets/sagen-logo.png";
 
@@ -23,6 +23,11 @@ const BookTickets = () => {
   const [remaining, setRemaining] = useState<number | null>(null);
   const [capacity, setCapacity] = useState(100);
   const [submitting, setSubmitting] = useState(false);
+  const [expiresAt, setExpiresAt] = useState<number | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const [expired, setExpired] = useState(false);
+  const holdId = useRef<string>(crypto.randomUUID());
+  const doneRef = useRef(false);
 
   useEffect(() => {
     supabase.rpc("get_availability").then(({ data }) => {
@@ -31,6 +36,61 @@ const BookTickets = () => {
       if (res && typeof res.capacity === "number") setCapacity(res.capacity);
     });
   }, []);
+
+  // Reserve the seats for 5 minutes while the guest fills in the form
+  const refreshHold = useCallback(async (seats: number) => {
+    const { data, error } = await supabase.rpc("hold_seats", {
+      _hold_id: holdId.current,
+      _seats: seats,
+    });
+    const res = data as { error?: string; expires_at?: string; remaining?: number } | null;
+    if (error || res?.error) {
+      if (res?.error) toast.error(res.error);
+      if (typeof res?.remaining === "number") setRemaining(res.remaining);
+      return false;
+    }
+    if (res?.expires_at) setExpiresAt(new Date(res.expires_at).getTime());
+    if (typeof res?.remaining === "number") setRemaining(res.remaining);
+    setExpired(false);
+    return true;
+  }, []);
+
+  useEffect(() => {
+    if (expired || doneRef.current) return;
+    refreshHold(guests.length);
+  }, [guests.length, expired, refreshHold]);
+
+  // Release the reservation if the guest leaves the page
+  useEffect(() => {
+    const id = holdId.current;
+    return () => {
+      if (!doneRef.current) {
+        supabase.rpc("release_hold", { _hold_id: id });
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!expiresAt) return;
+    const tick = () => {
+      const left = Math.max(0, Math.round((expiresAt - Date.now()) / 1000));
+      setSecondsLeft(left);
+      if (left === 0 && !doneRef.current) {
+        setExpired(true);
+        setExpiresAt(null);
+      }
+    };
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [expiresAt]);
+
+  const restart = async () => {
+    holdId.current = crypto.randomUUID();
+    setExpired(false);
+    const ok = await refreshHold(guests.length);
+    if (!ok) setExpired(true);
+  };
 
   const updateGuest = (index: number, field: keyof Guest, value: string) => {
     setGuests((prev) => prev.map((g, i) => (i === index ? { ...g, [field]: value } : g)));
@@ -47,7 +107,7 @@ const BookTickets = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (submitting) return;
+    if (submitting || expired) return;
 
     const cleaned = guests.map((g) => ({
       first_name: g.first_name.trim(),
@@ -67,6 +127,7 @@ const BookTickets = () => {
     const { data, error } = await supabase.rpc("create_booking_with_names", {
       _email: email.trim(),
       _names: cleaned,
+      _hold_id: holdId.current,
     });
 
     const res = data as { error?: string; booking_id?: string } | null;
@@ -76,6 +137,7 @@ const BookTickets = () => {
       return;
     }
 
+    doneRef.current = true;
     const bookingId = res!.booking_id!;
 
     supabase.functions
@@ -94,6 +156,12 @@ const BookTickets = () => {
     toast.success("Bokning bekräftad! Bekräftelse skickas till din e-post.");
     navigate(`/booking/${bookingId}`);
   };
+
+  const mmss =
+    secondsLeft === null
+      ? null
+      : `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, "0")}`;
+
 
   return (
     <div className="min-h-screen bg-background px-4 py-8">
