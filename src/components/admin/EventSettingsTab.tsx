@@ -155,7 +155,16 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
             value={capacity}
             onChange={(e) => setCapacity(e.target.value)}
           />
-          <p className="text-xs text-muted-foreground">Både bokade biljetter och VIP-gäster räknas in.</p>
+          <p className="text-xs text-muted-foreground">
+            Både bokade biljetter och VIP-gäster räknas in. Just nu är {taken} platser tagna. Ändringar här påverkar
+            aldrig befintliga bokningar.
+          </p>
+          {Number(capacity) > 0 && Number(capacity) < taken && (
+            <p className="text-xs text-destructive">
+              Maxantalet är lägre än de {taken} platser som redan är tagna. Inga bokningar tas bort – det går bara inte
+              att boka fler tills antalet höjs.
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
