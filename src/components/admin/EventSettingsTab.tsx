@@ -25,23 +25,30 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
   const [title, setTitle] = useState("");
   const [info, setInfo] = useState("");
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
+  const [taken, setTaken] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    supabase
-      .from("event_settings")
-      .select("capacity, event_title, event_info, poster_url")
-      .eq("id", 1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data) {
-          setCapacity(String(data.capacity ?? 100));
-          setTitle(data.event_title ?? "");
-          setInfo(data.event_info ?? "");
-          setPosterUrl(data.poster_url ?? null);
-        }
-        setLoading(false);
-      });
+    const load = async () => {
+      const [{ data }, { count: ticketCount }, { count: vipCount }] = await Promise.all([
+        supabase
+          .from("event_settings")
+          .select("capacity, event_title, event_info, poster_url")
+          .eq("id", 1)
+          .maybeSingle(),
+        supabase.from("tickets").select("id", { count: "exact", head: true }),
+        supabase.from("vip_guests").select("id", { count: "exact", head: true }),
+      ]);
+      if (data) {
+        setCapacity(String(data.capacity ?? 100));
+        setTitle(data.event_title ?? "");
+        setInfo(data.event_info ?? "");
+        setPosterUrl(data.poster_url ?? null);
+      }
+      setTaken((ticketCount ?? 0) + (vipCount ?? 0));
+      setLoading(false);
+    };
+    load();
   }, []);
 
   const save = async (patch?: { poster_url?: string | null }) => {
