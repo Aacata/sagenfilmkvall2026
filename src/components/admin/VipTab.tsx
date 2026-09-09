@@ -131,6 +131,27 @@ const VipTab = ({ onChange }: VipTabProps) => {
     setBusy(null);
   };
 
+  const query = search.trim().toLowerCase();
+  const filtered = query
+    ? guests.filter((g) =>
+        `${g.first_name} ${g.last_name} ${g.note ?? ""}`.toLowerCase().includes(query)
+      )
+    : guests;
+
+  const sorted = [...filtered].sort((a, b) => {
+    let cmp = 0;
+    if (sort.key === "name") {
+      cmp = `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, "sv");
+    } else if (sort.key === "note") {
+      cmp = (a.note ?? "").localeCompare(b.note ?? "", "sv");
+    } else if (sort.key === "checked_in") {
+      cmp = Number(a.checked_in) - Number(b.checked_in);
+    } else if (sort.key === "created_at") {
+      cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    }
+    return sort.dir === "asc" ? cmp : -cmp;
+  });
+
   const arrived = guests.filter((g) => g.checked_in).length;
 
   return (
