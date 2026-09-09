@@ -122,11 +122,39 @@ const BookingsTab = ({ onChange }: BookingsTabProps) => {
           <Users className="w-5 h-5" />
           Gästlista ({arrived}/{tickets.length} anlända)
         </CardTitle>
-        <Input
-          placeholder="Sök namn, bokningsnummer eller e-post"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Sök namn, bokningsnummer eller e-post"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex gap-2">
+            <select
+              value={sort.key}
+              onChange={(e) => setSort((s) => ({ ...s, key: e.target.value as typeof sort.key }))}
+              className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              aria-label="Sortera efter"
+            >
+              <option value="name">Namn</option>
+              <option value="booking">Bokningsnummer</option>
+              <option value="email">E-post</option>
+              <option value="checked_in">Incheckad</option>
+              <option value="created_at">Bokad</option>
+            </select>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSort((s) => ({ ...s, dir: s.dir === "asc" ? "desc" : "asc" }))}
+              aria-label={sort.dir === "asc" ? "Sortera fallande" : "Sortera stigande"}
+            >
+              {sort.dir === "asc" ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+            </Button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         {filtered.length === 0 ? (
