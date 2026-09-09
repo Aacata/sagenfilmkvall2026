@@ -14,16 +14,39 @@ interface TicketRow {
   last_name: string;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const FALLBACK_APP_URL = "https://sagenfilmkvall2026.lovable.app";
+
+// Only allow links back to our own app, never an attacker-supplied host.
+const safeAppUrl = (value: unknown): string => {
+  if (typeof value !== "string") return FALLBACK_APP_URL;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" && url.hostname !== "localhost") return FALLBACK_APP_URL;
+    if (url.hostname === "localhost" || url.hostname.endsWith(".lovable.app")) {
+      return url.origin;
+    }
+    return FALLBACK_APP_URL;
+  } catch {
+    return FALLBACK_APP_URL;
+  }
+};
+
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { bookingId, email, appUrl } = await req.json();
+    const body = await req.json();
+    const bookingId = body?.bookingId;
+    const appUrl = safeAppUrl(body?.appUrl);
 
-    if (!bookingId || !email || !appUrl) {
-      return new Response(JSON.stringify({ error: "Missing fields" }), {
+    if (typeof bookingId !== "string" || !UUID_RE.test(bookingId)) {
+      return new Response(JSON.stringify({ error: "Ogiltig bokning" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -45,9 +68,19 @@ Deno.serve(async (req) => {
 
     const { data: booking } = await supabase
       .from("bookings")
-      .select("booking_number")
+      .select("booking_number, email")
       .eq("id", bookingId)
       .maybeSingle();
+
+    if (!booking) {
+      return new Response(JSON.stringify({ error: "Bokningen hittades inte" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // The recipient always comes from the booking record, never from the request.
+    const email = booking.email as string;
 
     const { data: tickets } = await supabase
       .from("tickets")
@@ -56,7 +89,7 @@ Deno.serve(async (req) => {
       .order("created_at");
 
     const ticketRows = (tickets || []) as TicketRow[];
-    const bookingNumber = booking?.booking_number ?? "";
+    const bookingNumber = booking.booking_number ?? "";
 
     const GMAIL_USER = "bjarkikjellsson@gmail.com";
 
@@ -68,6 +101,7 @@ Deno.serve(async (req) => {
     const cancelUrl = `${appUrl}/cancel/${bookingId}`;
     const logoUrl =
       "https://ukopmsfkoexlgtwirkgt.supabase.co/storage/v1/object/public/email-assets/sagen-logo-email.jpg";
+
 
     const ticketsHtml = ticketRows
       .map((t) => {
