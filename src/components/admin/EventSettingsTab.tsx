@@ -7,8 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImageUp, Loader2, Save, Settings, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { optimizeImage } from "@/lib/optimizeImage";
 
 const TEN_YEARS = 60 * 60 * 24 * 365 * 10;
+const MAX_SOURCE_BYTES = 100 * 1024 * 1024;
+
 
 interface EventSettingsTabProps {
   onChange?: () => void;
