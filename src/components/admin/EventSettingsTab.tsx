@@ -24,6 +24,8 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
   const [capacity, setCapacity] = useState("100");
   const [title, setTitle] = useState("");
   const [info, setInfo] = useState("");
+  const [location, setLocation] = useState("");
+  const [time, setTime] = useState("");
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
   const [taken, setTaken] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -33,7 +35,7 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
       const [{ data }, { count: ticketCount }, { count: vipCount }] = await Promise.all([
         supabase
           .from("event_settings")
-          .select("capacity, event_title, event_info, poster_url")
+          .select("capacity, event_title, event_info, event_location, event_time, poster_url")
           .eq("id", 1)
           .maybeSingle(),
         supabase.from("tickets").select("id", { count: "exact", head: true }),
@@ -43,6 +45,8 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
         setCapacity(String(data.capacity ?? 100));
         setTitle(data.event_title ?? "");
         setInfo(data.event_info ?? "");
+        setLocation(data.event_location ?? "");
+        setTime(data.event_time ?? "");
         setPosterUrl(data.poster_url ?? null);
       }
       setTaken((ticketCount ?? 0) + (vipCount ?? 0));
@@ -64,6 +68,8 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
         capacity: Number.isFinite(cap) && cap > 0 ? cap : 100,
         event_title: title.trim() || null,
         event_info: info.trim() || null,
+        event_location: location.trim() || null,
+        event_time: time.trim() || null,
         ...(patch ?? {}),
       })
       .eq("id", 1);
@@ -168,8 +174,31 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="title">Rubrik på startsidan</Label>
+          <Label htmlFor="title">Eventnamn / rubrik på startsidan</Label>
           <Input id="title" maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="location">Plats</Label>
+            <Input
+              id="location"
+              maxLength={120}
+              placeholder="T.ex. Sägen, Storgatan 12"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="time">Tid</Label>
+            <Input
+              id="time"
+              maxLength={120}
+              placeholder="T.ex. Lördag 14 mars kl 19:00"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+            />
+          </div>
         </div>
 
         <div className="space-y-2">
