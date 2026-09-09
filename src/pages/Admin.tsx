@@ -15,7 +15,7 @@ const Admin = () => {
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
-  const [stats, setStats] = useState({ available: 0, booked: 0, checkedIn: 0 });
+  const [stats, setStats] = useState({ booked: 0, arrived: 0, waiting: 0, free: 100 });
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -43,27 +43,22 @@ const Admin = () => {
   }, []);
 
   const fetchStats = useCallback(async () => {
-    const { data } = await supabase.from("seats").select("is_booked, checked_in");
+    const { data } = await supabase.from("tickets").select("checked_in");
     if (!data) return;
+    const arrived = data.filter((t) => t.checked_in).length;
     setStats({
-      available: data.filter((s) => !s.is_booked).length,
-      booked: data.filter((s) => s.is_booked).length,
-      checkedIn: data.filter((s) => s.checked_in).length,
+      booked: data.length,
+      arrived,
+      waiting: data.length - arrived,
+      free: Math.max(0, 100 - data.length),
     });
   }, []);
 
   useEffect(() => {
     if (!isAdmin) return;
     fetchStats();
-
-    const channel = supabase
-      .channel("admin-stats")
-      .on("postgres_changes", { event: "*", schema: "public", table: "seats" }, () => {
-        fetchStats();
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
+    const interval = setInterval(fetchStats, 8000);
+    return () => clearInterval(interval);
   }, [isAdmin, fetchStats]);
 
   const handleLogout = async () => {
@@ -100,17 +95,18 @@ const Admin = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          <Card><CardContent className="pt-4 text-center"><p className="text-2xl font-bold">{stats.available}</p><p className="text-xs text-muted-foreground">Lediga</p></CardContent></Card>
+        <div className="grid grid-cols-4 gap-3 mb-6">
           <Card><CardContent className="pt-4 text-center"><p className="text-2xl font-bold text-primary">{stats.booked}</p><p className="text-xs text-muted-foreground">Bokade</p></CardContent></Card>
-          <Card><CardContent className="pt-4 text-center"><p className="text-2xl font-bold text-[hsl(var(--success))]">{stats.checkedIn}</p><p className="text-xs text-muted-foreground">Incheckade</p></CardContent></Card>
+          <Card><CardContent className="pt-4 text-center"><p className="text-2xl font-bold text-[hsl(var(--success))]">{stats.arrived}</p><p className="text-xs text-muted-foreground">Anlända</p></CardContent></Card>
+          <Card><CardContent className="pt-4 text-center"><p className="text-2xl font-bold">{stats.waiting}</p><p className="text-xs text-muted-foreground">Kvar</p></CardContent></Card>
+          <Card><CardContent className="pt-4 text-center"><p className="text-2xl font-bold">{stats.free}</p><p className="text-xs text-muted-foreground">Lediga</p></CardContent></Card>
         </div>
 
         {/* Tabs */}
         <Tabs defaultValue="scanner" className="space-y-4">
           <TabsList className="w-full">
             <TabsTrigger value="scanner" className="flex-1">Insläpp</TabsTrigger>
-            <TabsTrigger value="bookings" className="flex-1">Bokningar</TabsTrigger>
+            <TabsTrigger value="bookings" className="flex-1">Gäster</TabsTrigger>
             <TabsTrigger value="admins" className="flex-1">Admins</TabsTrigger>
             <TabsTrigger value="password" className="flex-1">Lösenord</TabsTrigger>
           </TabsList>
@@ -120,7 +116,7 @@ const Admin = () => {
           </TabsContent>
 
           <TabsContent value="bookings">
-            <BookingsTab />
+            <BookingsTab onChange={fetchStats} />
           </TabsContent>
 
           <TabsContent value="admins">
