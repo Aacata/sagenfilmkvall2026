@@ -248,7 +248,7 @@ const BookTickets = () => {
                 )}
               </div>
 
-              <Button type="submit" className="w-full h-12" disabled={submitting}>
+              <Button type="submit" className="w-full h-12" disabled={submitting || expired}>
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : `Boka ${guests.length} biljett${guests.length > 1 ? "er" : ""}`}
               </Button>
             </form>
