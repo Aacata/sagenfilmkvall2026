@@ -179,9 +179,22 @@ const BookTickets = () => {
             {remaining !== null && (
               <p className="text-xs text-muted-foreground">{remaining} av {capacity} platser kvar</p>
             )}
+            {!expired && mmss && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                Dina platser är reserverade i {mmss}
+              </p>
+            )}
           </CardHeader>
           <CardContent>
+            {expired && (
+              <div className="mb-4 p-3 rounded-lg border border-border bg-secondary/50 space-y-2">
+                <p className="text-sm">Tiden gick ut och platserna släpptes. Starta om för att reservera dem igen.</p>
+                <Button type="button" size="sm" onClick={restart}>Starta om</Button>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-5">
+
               <div className="space-y-2">
                 <Label htmlFor="email">E-postadress</Label>
                 <Input
