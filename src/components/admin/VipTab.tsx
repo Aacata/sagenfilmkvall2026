@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Crown, Loader2, Pencil, Plus, Trash2, Undo2, X } from "lucide-react";
+import { CheckCircle, Crown, Loader2, Pencil, Plus, Trash2, Undo2, X, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 
 interface VipGuest {
@@ -12,6 +12,7 @@ interface VipGuest {
   last_name: string;
   note: string | null;
   checked_in: boolean;
+  created_at: string;
 }
 
 interface VipTabProps {
@@ -22,6 +23,11 @@ const VipTab = ({ onChange }: VipTabProps) => {
   const [guests, setGuests] = useState<VipGuest[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<{ key: "name" | "note" | "checked_in" | "created_at"; dir: "asc" | "desc" }>({
+    key: "name",
+    dir: "asc",
+  });
   const [adding, setAdding] = useState(false);
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
@@ -34,7 +40,7 @@ const VipTab = ({ onChange }: VipTabProps) => {
   const fetchGuests = useCallback(async () => {
     const { data } = await supabase
       .from("vip_guests")
-      .select("id, first_name, last_name, note, checked_in")
+      .select("id, first_name, last_name, note, checked_in, created_at")
       .order("created_at");
     setGuests((data as VipGuest[]) || []);
     setLoading(false);
@@ -125,6 +131,27 @@ const VipTab = ({ onChange }: VipTabProps) => {
     setBusy(null);
   };
 
+  const query = search.trim().toLowerCase();
+  const filtered = query
+    ? guests.filter((g) =>
+        `${g.first_name} ${g.last_name} ${g.note ?? ""}`.toLowerCase().includes(query)
+      )
+    : guests;
+
+  const sorted = [...filtered].sort((a, b) => {
+    let cmp = 0;
+    if (sort.key === "name") {
+      cmp = `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, "sv");
+    } else if (sort.key === "note") {
+      cmp = (a.note ?? "").localeCompare(b.note ?? "", "sv");
+    } else if (sort.key === "checked_in") {
+      cmp = Number(a.checked_in) - Number(b.checked_in);
+    } else if (sort.key === "created_at") {
+      cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    }
+    return sort.dir === "asc" ? cmp : -cmp;
+  });
+
   const arrived = guests.filter((g) => g.checked_in).length;
 
   return (
@@ -134,6 +161,38 @@ const VipTab = ({ onChange }: VipTabProps) => {
           <Crown className="w-5 h-5" />
           VIP-lista ({arrived}/{guests.length} anlända)
         </CardTitle>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Sök namn eller notering"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex gap-2">
+            <select
+              value={sort.key}
+              onChange={(e) => setSort((s) => ({ ...s, key: e.target.value as typeof sort.key }))}
+              className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              aria-label="Sortera efter"
+            >
+              <option value="name">Namn</option>
+              <option value="note">Notering</option>
+              <option value="checked_in">Incheckad</option>
+              <option value="created_at">Tillagd</option>
+            </select>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSort((s) => ({ ...s, dir: s.dir === "asc" ? "desc" : "asc" }))}
+              aria-label={sort.dir === "asc" ? "Sortera fallande" : "Sortera stigande"}
+            >
+              {sort.dir === "asc" ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+            </Button>
+          </div>
+        </div>
         <form onSubmit={addGuest} className="space-y-2">
           <div className="flex gap-2">
             <Input placeholder="Förnamn" maxLength={60} value={first} onChange={(e) => setFirst(e.target.value)} />
@@ -152,11 +211,11 @@ const VipTab = ({ onChange }: VipTabProps) => {
           <div className="flex justify-center py-6">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
-        ) : guests.length === 0 ? (
+        ) : sorted.length === 0 ? (
           <p className="text-muted-foreground text-sm text-center py-4">Inga VIP-gäster tillagda.</p>
         ) : (
           <div className="space-y-2 max-h-[55vh] overflow-y-auto">
-            {guests.map((g) =>
+            {sorted.map((g) =>
               editingId === g.id ? (
                 <div key={g.id} className="space-y-2 p-3 rounded-lg bg-secondary/50 border border-border">
                   <div className="flex gap-2">

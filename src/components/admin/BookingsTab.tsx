@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Trash2, Users, CheckCircle, Undo2 } from "lucide-react";
+import { Loader2, Trash2, Users, CheckCircle, Undo2, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 
 interface TicketRow {
@@ -12,6 +12,7 @@ interface TicketRow {
   last_name: string;
   checked_in: boolean;
   booking_id: string;
+  created_at: string;
   bookings: { booking_number: string; email: string } | null;
 }
 
@@ -24,11 +25,15 @@ const BookingsTab = ({ onChange }: BookingsTabProps) => {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<{ key: "name" | "booking" | "email" | "checked_in" | "created_at"; dir: "asc" | "desc" }>({
+    key: "name",
+    dir: "asc",
+  });
 
   const fetchTickets = useCallback(async () => {
     const { data } = await supabase
       .from("tickets")
-      .select("id, first_name, last_name, checked_in, booking_id, bookings(booking_number, email)")
+      .select("id, first_name, last_name, checked_in, booking_id, created_at, bookings(booking_number, email)")
       .order("created_at");
     setTickets((data as unknown as TicketRow[]) || []);
     setLoading(false);
@@ -84,6 +89,22 @@ const BookingsTab = ({ onChange }: BookingsTabProps) => {
       )
     : tickets;
 
+  const sorted = [...filtered].sort((a, b) => {
+    let cmp = 0;
+    if (sort.key === "name") {
+      cmp = `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, "sv");
+    } else if (sort.key === "booking") {
+      cmp = (a.bookings?.booking_number ?? "").localeCompare(b.bookings?.booking_number ?? "", "sv");
+    } else if (sort.key === "email") {
+      cmp = (a.bookings?.email ?? "").localeCompare(b.bookings?.email ?? "", "sv");
+    } else if (sort.key === "checked_in") {
+      cmp = Number(a.checked_in) - Number(b.checked_in);
+    } else if (sort.key === "created_at") {
+      cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    }
+    return sort.dir === "asc" ? cmp : -cmp;
+  });
+
   const arrived = tickets.filter((t) => t.checked_in).length;
 
   if (loading) {
@@ -101,18 +122,46 @@ const BookingsTab = ({ onChange }: BookingsTabProps) => {
           <Users className="w-5 h-5" />
           Gästlista ({arrived}/{tickets.length} anlända)
         </CardTitle>
-        <Input
-          placeholder="Sök namn, bokningsnummer eller e-post"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Sök namn, bokningsnummer eller e-post"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex gap-2">
+            <select
+              value={sort.key}
+              onChange={(e) => setSort((s) => ({ ...s, key: e.target.value as typeof sort.key }))}
+              className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              aria-label="Sortera efter"
+            >
+              <option value="name">Namn</option>
+              <option value="booking">Bokningsnummer</option>
+              <option value="email">E-post</option>
+              <option value="checked_in">Incheckad</option>
+              <option value="created_at">Bokad</option>
+            </select>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSort((s) => ({ ...s, dir: s.dir === "asc" ? "desc" : "asc" }))}
+              aria-label={sort.dir === "asc" ? "Sortera fallande" : "Sortera stigande"}
+            >
+              {sort.dir === "asc" ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+            </Button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
-        {filtered.length === 0 ? (
+        {sorted.length === 0 ? (
           <p className="text-muted-foreground text-sm text-center py-4">Inga bokningar.</p>
         ) : (
           <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-            {filtered.map((t) => (
+            {sorted.map((t) => (
               <div
                 key={t.id}
                 className="flex items-center justify-between gap-2 p-3 rounded-lg bg-secondary/50 border border-border"
