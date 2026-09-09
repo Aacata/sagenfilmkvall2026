@@ -39,6 +39,8 @@ export type Database = {
         Row: {
           capacity: number
           created_at: string
+          event_info: string | null
+          event_title: string | null
           id: number
           poster_url: string | null
           updated_at: string
@@ -46,6 +48,8 @@ export type Database = {
         Insert: {
           capacity?: number
           created_at?: string
+          event_info?: string | null
+          event_title?: string | null
           id?: number
           poster_url?: string | null
           updated_at?: string
@@ -53,6 +57,8 @@ export type Database = {
         Update: {
           capacity?: number
           created_at?: string
+          event_info?: string | null
+          event_title?: string | null
           id?: number
           poster_url?: string | null
           updated_at?: string
