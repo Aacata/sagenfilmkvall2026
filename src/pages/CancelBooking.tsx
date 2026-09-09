@@ -27,56 +27,40 @@ const CancelBooking = () => {
     });
   }, [id]);
 
-  const notifyAdmin = (email: string, names: string[], allCancelled: boolean) => {
-    supabase.functions
-      .invoke("send-cancellation-notice", {
-        body: {
-          adminEmail: "hellosagen@gmail.com",
-          userEmail: email,
-          names,
-          allCancelled,
-          bookingId: id,
-          bookingNumber: booking?.booking_number,
-        },
-      })
-      .then(({ error }) => {
-        if (error) console.error("Admin notification error:", error);
-      });
-  };
-
   const cancelOne = async (ticketId: string) => {
     if (!id || !booking) return;
-    const { data, error } = await supabase.rpc("cancel_ticket", {
-      _booking_id: id,
-      _ticket_id: ticketId,
+    const ticket = booking.tickets.find((t) => t.id === ticketId);
+    const { data, error } = await supabase.functions.invoke("cancel-booking", {
+      body: { bookingId: id, ticketId },
     });
-    const res = data as { error?: string; email?: string; name?: string; booking_deleted?: boolean } | null;
+    const res = data as { error?: string; booking_deleted?: boolean } | null;
     if (error || res?.error) {
       toast.error(res?.error || "Kunde inte avboka biljetten");
       return;
     }
-    notifyAdmin(res!.email!, [res!.name!], !!res!.booking_deleted);
     if (res!.booking_deleted) {
       setStatus("done");
     } else {
       setBooking({ ...booking, tickets: booking.tickets.filter((t) => t.id !== ticketId) });
-      toast.success(`${res!.name} avbokad`);
+      toast.success(`${ticket?.first_name ?? ""} ${ticket?.last_name ?? ""} avbokad`.trim());
     }
   };
 
   const cancelAll = async () => {
     if (!id || !booking) return;
     setStatus("working");
-    const { data, error } = await supabase.rpc("cancel_booking", { _booking_id: id });
-    const res = data as { error?: string; email?: string; names?: string[] } | null;
+    const { data, error } = await supabase.functions.invoke("cancel-booking", {
+      body: { bookingId: id },
+    });
+    const res = data as { error?: string } | null;
     if (error || res?.error) {
       setStatus("confirm");
       toast.error("Kunde inte avboka");
       return;
     }
-    notifyAdmin(res!.email!, res!.names || [], true);
     setStatus("done");
   };
+
 
   if (status === "loading") {
     return (

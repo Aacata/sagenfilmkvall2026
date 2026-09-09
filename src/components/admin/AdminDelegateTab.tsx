@@ -33,6 +33,8 @@ const AdminDelegateTab = () => {
     fetchAdmins();
   }, []);
 
+  const [tempPassword, setTempPassword] = useState<{ email: string; password: string } | null>(null);
+
   const handleAddAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEmail.trim()) return;
@@ -45,15 +47,19 @@ const AdminDelegateTab = () => {
     if (error || data?.error) {
       toast.error(data?.error || "Kunde inte lägga till admin");
     } else {
-      const msg = data?.created
-        ? `Konto skapat för ${newEmail} med lösenord Admin1234! och admin-rättigheter tilldelade.`
-        : `${newEmail} har fått admin-rättigheter.`;
-      toast.success(msg);
+      if (data?.tempPassword) {
+        setTempPassword({ email: newEmail.trim(), password: data.tempPassword });
+        toast.success(`Konto skapat för ${newEmail}. Engångslösenordet visas nedan.`);
+      } else {
+        setTempPassword(null);
+        toast.success(`${newEmail} har fått admin-rättigheter.`);
+      }
       setNewEmail("");
       fetchAdmins();
     }
     setAdding(false);
   };
+
 
   const handleRemoveAdmin = async (admin: AdminUser) => {
     setRemoving(admin.id);
@@ -100,6 +106,18 @@ const AdminDelegateTab = () => {
           </Button>
         </form>
 
+        {tempPassword && (
+          <div className="p-3 rounded-lg border border-border bg-secondary/50 space-y-1">
+            <p className="text-sm">
+              Engångslösenord för <strong>{tempPassword.email}</strong>:
+            </p>
+            <p className="font-mono text-base break-all">{tempPassword.password}</p>
+            <p className="text-xs text-muted-foreground">
+              Visas bara en gång. Skicka det personligen och be personen byta lösenord direkt efter första inloggningen.
+            </p>
+          </div>
+        )}
+
         <div className="space-y-2">
           {admins.map((admin) => (
             <div
@@ -124,8 +142,10 @@ const AdminDelegateTab = () => {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Ange e-postadressen för den nya adminen. Om inget konto finns skapas ett automatiskt med lösenordet <strong>Admin1234!</strong>
+          Ange e-postadressen för den nya adminen. Om inget konto finns skapas ett automatiskt med ett unikt
+          engångslösenord som visas här en gång.
         </p>
+
       </CardContent>
     </Card>
   );

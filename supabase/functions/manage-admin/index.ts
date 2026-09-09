@@ -62,11 +62,21 @@ Deno.serve(async (req) => {
 
     if (action === "add") {
       let userId: string;
+      let tempPassword: string | null = null;
 
-      // Try creating the user with default password
+      // Unique random one-time password per new account (never a shared default).
+      const generatePassword = () => {
+        const bytes = crypto.getRandomValues(new Uint8Array(18));
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+        return Array.from(bytes, (b) => chars[b % chars.length]).join("") + "!9";
+      };
+
+      const candidate = generatePassword();
+
+      // Try creating the user with a one-time random password
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email,
-        password: "Admin1234!",
+        password: candidate,
         email_confirm: true,
       });
 
@@ -81,7 +91,9 @@ Deno.serve(async (req) => {
         userId = foundId;
       } else {
         userId = newUser.user.id;
+        tempPassword = candidate;
       }
+
 
       // Fix NULL columns to prevent GoTrue scan errors
       await supabaseAdmin.rpc("fix_auth_user_nulls", { _user_id: userId });
@@ -105,7 +117,7 @@ Deno.serve(async (req) => {
         .insert({ user_id: userId, role: "admin" });
       if (insertError) throw insertError;
 
-      return new Response(JSON.stringify({ success: true, created: !createError }), {
+      return new Response(JSON.stringify({ success: true, created: !createError, tempPassword }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
