@@ -35,7 +35,7 @@ const VipTab = ({ onChange }: VipTabProps) => {
   const fetchGuests = useCallback(async () => {
     const { data } = await supabase
       .from("vip_guests")
-      .select("id, first_name, last_name, note, checked_in")
+      .select("id, first_name, last_name, note, checked_in, created_at")
       .order("created_at");
     setGuests((data as VipGuest[]) || []);
     setLoading(false);

@@ -29,7 +29,7 @@ const BookingsTab = ({ onChange }: BookingsTabProps) => {
   const fetchTickets = useCallback(async () => {
     const { data } = await supabase
       .from("tickets")
-      .select("id, first_name, last_name, checked_in, booking_id, bookings(booking_number, email)")
+      .select("id, first_name, last_name, checked_in, booking_id, created_at, bookings(booking_number, email)")
       .order("created_at");
     setTickets((data as unknown as TicketRow[]) || []);
     setLoading(false);
