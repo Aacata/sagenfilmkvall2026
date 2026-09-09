@@ -7,8 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImageUp, Loader2, Save, Settings, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { optimizeImage } from "@/lib/optimizeImage";
 
 const TEN_YEARS = 60 * 60 * 24 * 365 * 10;
+const MAX_SOURCE_BYTES = 100 * 1024 * 1024;
+
 
 interface EventSettingsTabProps {
   onChange?: () => void;
@@ -74,16 +77,26 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
       toast.error("Välj en bildfil");
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Bilden får vara max 10 MB");
+    if (file.size > MAX_SOURCE_BYTES) {
+      toast.error("Bilden får vara max 100 MB");
       return;
     }
     setUploading(true);
-    const ext = file.name.split(".").pop() || "jpg";
-    const path = `poster-${Date.now()}.${ext}`;
-    const { error: uploadError } = await supabase.storage.from("event-assets").upload(path, file, {
+
+    let optimized;
+    try {
+      optimized = await optimizeImage(file);
+    } catch {
+      setUploading(false);
+      toast.error("Kunde inte bearbeta bilden. Prova en annan fil.");
+      return;
+    }
+
+    const path = `poster-${Date.now()}.${optimized.extension}`;
+    const { error: uploadError } = await supabase.storage.from("event-assets").upload(path, optimized.blob, {
       cacheControl: "3600",
       upsert: true,
+      contentType: optimized.contentType,
     });
     if (uploadError) {
       setUploading(false);
@@ -101,6 +114,7 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
     setPosterUrl(signed.signedUrl);
     await save({ poster_url: signed.signedUrl });
   };
+
 
   const removePoster = async () => {
     setPosterUrl(null);
@@ -164,6 +178,10 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
             )}
           </div>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+          <p className="text-xs text-muted-foreground">
+            Stora bilder går bra (upp till 100 MB) – de förminskas och sparas automatiskt i ett snabbt webbformat.
+          </p>
+
         </div>
 
         <Button className="w-full" onClick={() => save()} disabled={saving}>
