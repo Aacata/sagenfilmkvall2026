@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, ImageUp, Loader2, QrCode, Save, Settings, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { optimizeImage } from "@/lib/optimizeImage";
+import LocationPicker from "@/components/admin/LocationPicker";
 
 const TEN_YEARS = 60 * 60 * 24 * 365 * 10;
 const MAX_SOURCE_BYTES = 100 * 1024 * 1024;
@@ -28,6 +29,8 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
   const [location, setLocation] = useState("");
   const [time, setTime] = useState("");
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
   const [taken, setTaken] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -36,7 +39,7 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
       const [{ data }, { count: ticketCount }, { count: vipCount }] = await Promise.all([
         supabase
           .from("event_settings")
-          .select("capacity, event_title, event_info, event_location, event_time, poster_url")
+          .select("capacity, event_title, event_info, event_location, event_time, poster_url, event_lat, event_lng")
           .eq("id", 1)
           .maybeSingle(),
         supabase.from("tickets").select("id", { count: "exact", head: true }),
@@ -49,6 +52,8 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
         setLocation(data.event_location ?? "");
         setTime(data.event_time ?? "");
         setPosterUrl(data.poster_url ?? null);
+        setLat(data.event_lat ?? null);
+        setLng(data.event_lng ?? null);
       }
       setTaken((ticketCount ?? 0) + (vipCount ?? 0));
       setLoading(false);
@@ -71,6 +76,8 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
         event_info: info.trim() || null,
         event_location: location.trim() || null,
         event_time: time.trim() || null,
+        event_lat: lat,
+        event_lng: lng,
         ...(patch ?? {}),
       })
       .eq("id", 1);
@@ -221,6 +228,29 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
               onChange={(e) => setTime(e.target.value)}
             />
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Karta – sätt en nål på platsen</Label>
+          <LocationPicker
+            lat={lat}
+            lng={lng}
+            address={location}
+            onChange={({ lat: la, lng: ln, address }) => {
+              setLat(la);
+              setLng(ln);
+              if (address && !location.trim()) setLocation(address.slice(0, 120));
+            }}
+          />
+          {lat != null && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setLat(null); setLng(null); }}>
+              Ta bort nålen
+            </Button>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Nålen används för vägbeskrivningen som gästerna får när de klickar på platsen på startsidan. Glöm inte att
+            spara.
+          </p>
         </div>
 
         <div className="space-y-2">

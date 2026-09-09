@@ -1,0 +1,1 @@
+ALTER TABLE public.event_settings ADD COLUMN IF NOT EXISTS event_lat double precision, ADD COLUMN IF NOT EXISTS event_lng double precision;

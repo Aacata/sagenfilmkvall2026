@@ -11,6 +11,8 @@ interface EventSettings {
   event_info: string | null;
   event_location: string | null;
   event_time: string | null;
+  event_lat: number | null;
+  event_lng: number | null;
   poster_url: string | null;
 }
 
@@ -22,7 +24,7 @@ const Index = () => {
   useEffect(() => {
     supabase
       .from("event_settings")
-      .select("capacity, event_title, event_info, event_location, event_time, poster_url")
+      .select("capacity, event_title, event_info, event_location, event_time, event_lat, event_lng, poster_url")
       .eq("id", 1)
       .maybeSingle()
       .then(({ data }) => {
@@ -50,6 +52,12 @@ const Index = () => {
     "En kväll med film, popcorn och gott sällskap. Boka dina biljetter – ange namn på alla som kommer.";
   const location = settings?.event_location?.trim();
   const time = settings?.event_time?.trim();
+  const lat = settings?.event_lat;
+  const lng = settings?.event_lng;
+  const destination = lat != null && lng != null ? `${lat},${lng}` : location;
+  const directionsUrl = destination
+    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`
+    : null;
 
   return (
     <div className="relative min-h-screen bg-background px-4 py-10 flex flex-col overflow-hidden">
@@ -67,7 +75,7 @@ const Index = () => {
 
       <div className="relative flex flex-col flex-1">
         <header className="relative flex items-center justify-center">
-          <img src={sagenLogo} alt="Sägen Film" className="h-32 object-contain" />
+          <img src={sagenLogo} alt="Sägen Film" className="h-44 sm:h-56 object-contain" />
           <Button variant="ghost" size="sm" asChild className="absolute right-0 text-muted-foreground">
             <Link to="/admin" aria-label="Admin"><ShieldCheck className="w-4 h-4" /></Link>
           </Button>
@@ -77,12 +85,23 @@ const Index = () => {
           <h1 className="text-5xl sm:text-6xl font-bold tracking-tight max-w-3xl leading-tight">{title}</h1>
 
           <div className="flex flex-col items-center gap-2 text-lg sm:text-xl text-muted-foreground">
-            {location && (
-              <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-primary" />
-                <span>{location}</span>
-              </div>
-            )}
+            {location &&
+              (directionsUrl ? (
+                <a
+                  href={directionsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 underline underline-offset-4 hover:text-foreground transition-colors"
+                >
+                  <MapPin className="w-5 h-5 text-primary" />
+                  <span>{location}</span>
+                </a>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-primary" />
+                  <span>{location}</span>
+                </div>
+              ))}
             {time && (
               <div className="flex items-center gap-2">
                 <Clock className="w-5 h-5 text-primary" />
@@ -90,6 +109,17 @@ const Index = () => {
               </div>
             )}
           </div>
+
+          {directionsUrl && (
+            <a
+              href={directionsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-primary underline underline-offset-4"
+            >
+              Visa vägbeskrivning
+            </a>
+          )}
 
           <p className="text-muted-foreground max-w-md whitespace-pre-line text-base">{info}</p>
 
