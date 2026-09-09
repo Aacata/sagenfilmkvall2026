@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=20&qzone=4&ecc=H&format=png&data=${encodeURIComponent(t.id)}`;
         return `
           <div style="text-align:center;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin:16px 0;">
-            <p style="margin:0 0 12px;font-size:16px;font-weight:600;color:#1e293b;">${t.first_name} ${t.last_name}</p>
+            <p style="margin:0 0 12px;font-size:16px;font-weight:600;color:#1e293b;">${escapeHtml(t.first_name)} ${escapeHtml(t.last_name)}</p>
             <img src="${qrUrl}" alt="QR-kod" width="220" height="220" style="border-radius:8px;background:#ffffff;" />
           </div>`;
       })
