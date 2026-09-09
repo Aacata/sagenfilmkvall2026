@@ -1,0 +1,30 @@
+DROP FUNCTION IF EXISTS public.create_booking_with_names(text, jsonb);
+
+REVOKE ALL ON FUNCTION public.cancel_booking(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.cancel_ticket(uuid, uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.create_booking_with_names(text, jsonb, uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_availability() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.hold_seats(uuid, integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.release_hold(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_booking_public(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.check_in_ticket(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.find_booking_by_number(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.has_role(uuid, public.app_role) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.find_user_by_email_fn(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.fix_auth_user_nulls(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.purge_expired_holds() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.update_updated_at_column() FROM PUBLIC, anon, authenticated;
+
+GRANT EXECUTE ON FUNCTION public.create_booking_with_names(text, jsonb, uuid) TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.get_availability() TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.hold_seats(uuid, integer) TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.release_hold(uuid) TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.get_booking_public(uuid) TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.check_in_ticket(uuid) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.find_booking_by_number(text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.has_role(uuid, public.app_role) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.cancel_booking(uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.cancel_ticket(uuid, uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.find_user_by_email_fn(text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.fix_auth_user_nulls(uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.purge_expired_holds() TO service_role;
