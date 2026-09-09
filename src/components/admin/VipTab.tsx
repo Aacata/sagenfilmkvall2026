@@ -23,6 +23,11 @@ const VipTab = ({ onChange }: VipTabProps) => {
   const [guests, setGuests] = useState<VipGuest[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<{ key: "name" | "note" | "checked_in" | "created_at"; dir: "asc" | "desc" }>({
+    key: "name",
+    dir: "asc",
+  });
   const [adding, setAdding] = useState(false);
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");

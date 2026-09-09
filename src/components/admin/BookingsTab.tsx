@@ -25,6 +25,10 @@ const BookingsTab = ({ onChange }: BookingsTabProps) => {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<{ key: "name" | "booking" | "email" | "checked_in" | "created_at"; dir: "asc" | "desc" }>({
+    key: "name",
+    dir: "asc",
+  });
 
   const fetchTickets = useCallback(async () => {
     const { data } = await supabase
