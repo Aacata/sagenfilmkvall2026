@@ -74,16 +74,26 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
       toast.error("Välj en bildfil");
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Bilden får vara max 10 MB");
+    if (file.size > MAX_SOURCE_BYTES) {
+      toast.error("Bilden får vara max 100 MB");
       return;
     }
     setUploading(true);
-    const ext = file.name.split(".").pop() || "jpg";
-    const path = `poster-${Date.now()}.${ext}`;
-    const { error: uploadError } = await supabase.storage.from("event-assets").upload(path, file, {
+
+    let optimized;
+    try {
+      optimized = await optimizeImage(file);
+    } catch {
+      setUploading(false);
+      toast.error("Kunde inte bearbeta bilden. Prova en annan fil.");
+      return;
+    }
+
+    const path = `poster-${Date.now()}.${optimized.extension}`;
+    const { error: uploadError } = await supabase.storage.from("event-assets").upload(path, optimized.blob, {
       cacheControl: "3600",
       upsert: true,
+      contentType: optimized.contentType,
     });
     if (uploadError) {
       setUploading(false);
@@ -101,6 +111,7 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
     setPosterUrl(signed.signedUrl);
     await save({ poster_url: signed.signedUrl });
   };
+
 
   const removePoster = async () => {
     setPosterUrl(null);
