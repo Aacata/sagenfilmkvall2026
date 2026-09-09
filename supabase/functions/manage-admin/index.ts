@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
         .insert({ user_id: userId, role: "admin" });
       if (insertError) throw insertError;
 
-      return new Response(JSON.stringify({ success: true, created: !createError }), {
+      return new Response(JSON.stringify({ success: true, created: !createError, tempPassword }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
