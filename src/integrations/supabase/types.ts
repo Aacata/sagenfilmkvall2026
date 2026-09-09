@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      booking_holds: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          seats: number
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id: string
+          seats: number
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          seats?: number
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
           booking_number: string
@@ -162,10 +183,12 @@ export type Database = {
         Returns: Json
       }
       check_in_ticket: { Args: { _ticket_id: string }; Returns: Json }
-      create_booking_with_names: {
-        Args: { _email: string; _names: Json }
-        Returns: Json
-      }
+      create_booking_with_names:
+        | { Args: { _email: string; _names: Json }; Returns: Json }
+        | {
+            Args: { _email: string; _hold_id?: string; _names: Json }
+            Returns: Json
+          }
       find_booking_by_number: { Args: { _number: string }; Returns: Json }
       find_user_by_email_fn: { Args: { _email: string }; Returns: string }
       fix_auth_user_nulls: { Args: { _user_id: string }; Returns: undefined }
@@ -178,6 +201,9 @@ export type Database = {
         }
         Returns: boolean
       }
+      hold_seats: { Args: { _hold_id: string; _seats: number }; Returns: Json }
+      purge_expired_holds: { Args: never; Returns: undefined }
+      release_hold: { Args: { _hold_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin"
