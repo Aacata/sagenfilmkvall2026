@@ -12,6 +12,7 @@ interface TicketRow {
   last_name: string;
   checked_in: boolean;
   booking_id: string;
+  created_at: string;
   bookings: { booking_number: string; email: string } | null;
 }
 

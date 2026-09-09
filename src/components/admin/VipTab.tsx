@@ -12,6 +12,7 @@ interface VipGuest {
   last_name: string;
   note: string | null;
   checked_in: boolean;
+  created_at: string;
 }
 
 interface VipTabProps {
