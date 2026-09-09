@@ -1,8 +1,7 @@
 # Roadmap
 
-- [x] Databas: event_settings (maxantal, affisch) + vip_guests, kapacitet räknar med VIP
-- [ ] Titel och infotext på startsidan, redigerbara i admin
-- [ ] Lagringsplats för affischbild + uppladdning i admin
-- [ ] Admin: VIP-lista med incheckning
-- [ ] Admin: inställningsflik (maxantal, affisch, titel, info)
-- [ ] Startsidan: visa affisch som bakgrund, titel och info
+- [x] Databas: event_settings (maxantal, affisch, rubrik, info) + vip_guests, kapacitet räknar med VIP
+- [x] Lagringsplats för affischbild + uppladdning i admin
+- [x] Admin: VIP-lista med incheckning
+- [x] Admin: eventflik (maxantal, affisch, rubrik, info)
+- [x] Startsidan: affisch som bakgrund, redigerbar rubrik och info

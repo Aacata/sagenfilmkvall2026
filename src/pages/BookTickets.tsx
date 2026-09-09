@@ -109,7 +109,7 @@ const BookTickets = () => {
               Boka biljetter
             </CardTitle>
             {remaining !== null && (
-              <p className="text-xs text-muted-foreground">{remaining} av 100 platser kvar</p>
+              <p className="text-xs text-muted-foreground">{remaining} av {capacity} platser kvar</p>
             )}
           </CardHeader>
           <CardContent>
