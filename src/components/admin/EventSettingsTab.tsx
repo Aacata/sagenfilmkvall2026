@@ -5,12 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ImageUp, Loader2, Save, Settings, Trash2 } from "lucide-react";
+import { Download, ImageUp, Loader2, QrCode, Save, Settings, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { optimizeImage } from "@/lib/optimizeImage";
 
 const TEN_YEARS = 60 * 60 * 24 * 365 * 10;
 const MAX_SOURCE_BYTES = 100 * 1024 * 1024;
+const PUBLIC_URL = "https://sagenfilmkvall.lovable.app";
 
 
 interface EventSettingsTabProps {
@@ -134,6 +135,27 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
     await save({ poster_url: null });
   };
 
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=800x800&data=${encodeURIComponent(PUBLIC_URL)}&format=png&margin=20`;
+
+  const downloadQr = async () => {
+    try {
+      const response = await fetch(qrUrl);
+      if (!response.ok) throw new Error("Kunde inte hämta QR-koden");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `sagen-filmkvall-qr.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("QR-koden laddas ner");
+    } catch {
+      toast.error("Kunde inte ladda ner QR-koden");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -227,6 +249,30 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
             Stora bilder går bra (upp till 100 MB) – de förminskas och sparas automatiskt i ett snabbt webbformat.
           </p>
 
+        </div>
+
+        <div className="space-y-3 rounded-lg border border-border p-4 bg-muted/30">
+          <div className="flex items-center gap-2">
+            <QrCode className="w-5 h-5 text-primary" />
+            <Label className="text-base font-medium">QR-kod för affisch / flyer</Label>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Ladda ner en högupplöst QR-kod att placera på affischer eller flyers. Koden leder till bokningssidan.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <img
+              src={qrUrl}
+              alt="QR-kod till bokningssidan"
+              className="w-40 h-40 rounded-lg border border-border bg-white"
+            />
+            <div className="flex flex-col gap-2 items-start">
+              <p className="text-sm font-medium break-all">{PUBLIC_URL}</p>
+              <Button type="button" variant="outline" onClick={downloadQr}>
+                <Download className="w-4 h-4 mr-2" />
+                Ladda ner PNG
+              </Button>
+            </div>
+          </div>
         </div>
 
         <Button className="w-full" onClick={() => save()} disabled={saving}>
