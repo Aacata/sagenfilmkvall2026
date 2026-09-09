@@ -161,6 +161,38 @@ const VipTab = ({ onChange }: VipTabProps) => {
           <Crown className="w-5 h-5" />
           VIP-lista ({arrived}/{guests.length} anlända)
         </CardTitle>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Sök namn eller notering"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex gap-2">
+            <select
+              value={sort.key}
+              onChange={(e) => setSort((s) => ({ ...s, key: e.target.value as typeof sort.key }))}
+              className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              aria-label="Sortera efter"
+            >
+              <option value="name">Namn</option>
+              <option value="note">Notering</option>
+              <option value="checked_in">Incheckad</option>
+              <option value="created_at">Tillagd</option>
+            </select>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSort((s) => ({ ...s, dir: s.dir === "asc" ? "desc" : "asc" }))}
+              aria-label={sort.dir === "asc" ? "Sortera fallande" : "Sortera stigande"}
+            >
+              {sort.dir === "asc" ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+            </Button>
+          </div>
+        </div>
         <form onSubmit={addGuest} className="space-y-2">
           <div className="flex gap-2">
             <Input placeholder="Förnamn" maxLength={60} value={first} onChange={(e) => setFirst(e.target.value)} />
