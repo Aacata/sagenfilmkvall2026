@@ -29,6 +29,8 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
   const [location, setLocation] = useState("");
   const [time, setTime] = useState("");
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
   const [taken, setTaken] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -37,7 +39,7 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
       const [{ data }, { count: ticketCount }, { count: vipCount }] = await Promise.all([
         supabase
           .from("event_settings")
-          .select("capacity, event_title, event_info, event_location, event_time, poster_url")
+          .select("capacity, event_title, event_info, event_location, event_time, poster_url, event_lat, event_lng")
           .eq("id", 1)
           .maybeSingle(),
         supabase.from("tickets").select("id", { count: "exact", head: true }),
@@ -50,6 +52,8 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
         setLocation(data.event_location ?? "");
         setTime(data.event_time ?? "");
         setPosterUrl(data.poster_url ?? null);
+        setLat(data.event_lat ?? null);
+        setLng(data.event_lng ?? null);
       }
       setTaken((ticketCount ?? 0) + (vipCount ?? 0));
       setLoading(false);
@@ -72,6 +76,8 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
         event_info: info.trim() || null,
         event_location: location.trim() || null,
         event_time: time.trim() || null,
+        event_lat: lat,
+        event_lng: lng,
         ...(patch ?? {}),
       })
       .eq("id", 1);
