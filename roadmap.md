@@ -5,3 +5,5 @@
 - [x] Admin: VIP-lista med incheckning
 - [x] Admin: eventflik (maxantal, affisch, rubrik, info)
 - [x] Startsidan: affisch som bakgrund, redigerbar rubrik och info
+- [x] Admin: plats- och tidsfält för eventet + tydligare presentation på startsidan
+- [x] Admin: nedladdningsbar QR-kod för affisch/flyer

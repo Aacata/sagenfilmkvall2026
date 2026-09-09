@@ -2,13 +2,15 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, Ticket } from "lucide-react";
+import { Clock, MapPin, ShieldCheck, Ticket } from "lucide-react";
 import sagenLogo from "@/assets/sagen-logo.png";
 
 interface EventSettings {
   capacity: number;
   event_title: string | null;
   event_info: string | null;
+  event_location: string | null;
+  event_time: string | null;
   poster_url: string | null;
 }
 
@@ -20,7 +22,7 @@ const Index = () => {
   useEffect(() => {
     supabase
       .from("event_settings")
-      .select("capacity, event_title, event_info, poster_url")
+      .select("capacity, event_title, event_info, event_location, event_time, poster_url")
       .eq("id", 1)
       .maybeSingle()
       .then(({ data }) => {
@@ -46,6 +48,8 @@ const Index = () => {
   const info =
     settings?.event_info?.trim() ||
     "En kväll med film, popcorn och gott sällskap. Boka dina biljetter – ange namn på alla som kommer.";
+  const location = settings?.event_location?.trim();
+  const time = settings?.event_time?.trim();
 
   return (
     <div className="relative min-h-screen bg-background px-4 py-10 flex flex-col overflow-hidden">
@@ -70,8 +74,24 @@ const Index = () => {
         </header>
 
         <main className="flex-1 flex flex-col items-center justify-center text-center gap-6 py-12">
-          <h1 className="text-4xl font-bold tracking-tight">{title}</h1>
-          <p className="text-muted-foreground max-w-md whitespace-pre-line">{info}</p>
+          <h1 className="text-5xl sm:text-6xl font-bold tracking-tight max-w-3xl leading-tight">{title}</h1>
+
+          <div className="flex flex-col items-center gap-2 text-lg sm:text-xl text-muted-foreground">
+            {location && (
+              <div className="flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-primary" />
+                <span>{location}</span>
+              </div>
+            )}
+            {time && (
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-primary" />
+                <span>{time}</span>
+              </div>
+            )}
+          </div>
+
+          <p className="text-muted-foreground max-w-md whitespace-pre-line text-base">{info}</p>
 
           {remaining !== null && (
             <p className="text-sm text-muted-foreground">

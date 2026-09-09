@@ -5,12 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ImageUp, Loader2, Save, Settings, Trash2 } from "lucide-react";
+import { Download, ImageUp, Loader2, QrCode, Save, Settings, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { optimizeImage } from "@/lib/optimizeImage";
 
 const TEN_YEARS = 60 * 60 * 24 * 365 * 10;
 const MAX_SOURCE_BYTES = 100 * 1024 * 1024;
+const PUBLIC_URL = "https://sagenfilmkvall.lovable.app";
 
 
 interface EventSettingsTabProps {
@@ -24,6 +25,8 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
   const [capacity, setCapacity] = useState("100");
   const [title, setTitle] = useState("");
   const [info, setInfo] = useState("");
+  const [location, setLocation] = useState("");
+  const [time, setTime] = useState("");
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
   const [taken, setTaken] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -33,7 +36,7 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
       const [{ data }, { count: ticketCount }, { count: vipCount }] = await Promise.all([
         supabase
           .from("event_settings")
-          .select("capacity, event_title, event_info, poster_url")
+          .select("capacity, event_title, event_info, event_location, event_time, poster_url")
           .eq("id", 1)
           .maybeSingle(),
         supabase.from("tickets").select("id", { count: "exact", head: true }),
@@ -43,6 +46,8 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
         setCapacity(String(data.capacity ?? 100));
         setTitle(data.event_title ?? "");
         setInfo(data.event_info ?? "");
+        setLocation(data.event_location ?? "");
+        setTime(data.event_time ?? "");
         setPosterUrl(data.poster_url ?? null);
       }
       setTaken((ticketCount ?? 0) + (vipCount ?? 0));
@@ -64,6 +69,8 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
         capacity: Number.isFinite(cap) && cap > 0 ? cap : 100,
         event_title: title.trim() || null,
         event_info: info.trim() || null,
+        event_location: location.trim() || null,
+        event_time: time.trim() || null,
         ...(patch ?? {}),
       })
       .eq("id", 1);
@@ -128,6 +135,27 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
     await save({ poster_url: null });
   };
 
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=800x800&data=${encodeURIComponent(PUBLIC_URL)}&format=png&margin=20`;
+
+  const downloadQr = async () => {
+    try {
+      const response = await fetch(qrUrl);
+      if (!response.ok) throw new Error("Kunde inte hämta QR-koden");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `sagen-filmkvall-qr.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("QR-koden laddas ner");
+    } catch {
+      toast.error("Kunde inte ladda ner QR-koden");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -168,8 +196,31 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="title">Rubrik på startsidan</Label>
+          <Label htmlFor="title">Eventnamn / rubrik på startsidan</Label>
           <Input id="title" maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="location">Plats</Label>
+            <Input
+              id="location"
+              maxLength={120}
+              placeholder="T.ex. Sägen, Storgatan 12"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="time">Tid</Label>
+            <Input
+              id="time"
+              maxLength={120}
+              placeholder="T.ex. Lördag 14 mars kl 19:00"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+            />
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -198,6 +249,30 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
             Stora bilder går bra (upp till 100 MB) – de förminskas och sparas automatiskt i ett snabbt webbformat.
           </p>
 
+        </div>
+
+        <div className="space-y-3 rounded-lg border border-border p-4 bg-muted/30">
+          <div className="flex items-center gap-2">
+            <QrCode className="w-5 h-5 text-primary" />
+            <Label className="text-base font-medium">QR-kod för affisch / flyer</Label>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Ladda ner en högupplöst QR-kod att placera på affischer eller flyers. Koden leder till bokningssidan.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <img
+              src={qrUrl}
+              alt="QR-kod till bokningssidan"
+              className="w-40 h-40 rounded-lg border border-border bg-white"
+            />
+            <div className="flex flex-col gap-2 items-start">
+              <p className="text-sm font-medium break-all">{PUBLIC_URL}</p>
+              <Button type="button" variant="outline" onClick={downloadQr}>
+                <Download className="w-4 h-4 mr-2" />
+                Ladda ner PNG
+              </Button>
+            </div>
+          </div>
         </div>
 
         <Button className="w-full" onClick={() => save()} disabled={saving}>
