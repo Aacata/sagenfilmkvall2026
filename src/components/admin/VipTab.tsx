@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Crown, Loader2, Plus, Trash2, Undo2 } from "lucide-react";
+import { CheckCircle, Crown, Loader2, Pencil, Plus, Trash2, Undo2, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface VipGuest {
@@ -26,6 +26,10 @@ const VipTab = ({ onChange }: VipTabProps) => {
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
   const [note, setNote] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editFirst, setEditFirst] = useState("");
+  const [editLast, setEditLast] = useState("");
+  const [editNote, setEditNote] = useState("");
 
   const fetchGuests = useCallback(async () => {
     const { data } = await supabase
@@ -38,9 +42,10 @@ const VipTab = ({ onChange }: VipTabProps) => {
 
   useEffect(() => {
     fetchGuests();
+    if (editingId) return;
     const interval = setInterval(fetchGuests, 10000);
     return () => clearInterval(interval);
-  }, [fetchGuests]);
+  }, [fetchGuests, editingId]);
 
   const addGuest = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,6 +91,31 @@ const VipTab = ({ onChange }: VipTabProps) => {
     setBusy(null);
   };
 
+  const saveEdit = async (g: VipGuest) => {
+    if (!editFirst.trim() || !editLast.trim()) {
+      toast.error("Fyll i för- och efternamn");
+      return;
+    }
+    setBusy(g.id);
+    const { error } = await supabase
+      .from("vip_guests")
+      .update({
+        first_name: editFirst.trim(),
+        last_name: editLast.trim(),
+        note: editNote.trim() || null,
+      })
+      .eq("id", g.id);
+    if (error) {
+      toast.error("Kunde inte spara ändringen");
+    } else {
+      toast.success("Gästen är uppdaterad");
+      setEditingId(null);
+      await fetchGuests();
+      onChange?.();
+    }
+    setBusy(null);
+  };
+
   const removeGuest = async (g: VipGuest) => {
     setBusy(g.id);
     await supabase.from("vip_guests").delete().eq("id", g.id);
@@ -126,45 +156,77 @@ const VipTab = ({ onChange }: VipTabProps) => {
           <p className="text-muted-foreground text-sm text-center py-4">Inga VIP-gäster tillagda.</p>
         ) : (
           <div className="space-y-2 max-h-[55vh] overflow-y-auto">
-            {guests.map((g) => (
-              <div
-                key={g.id}
-                className="flex items-center justify-between gap-2 p-3 rounded-lg bg-secondary/50 border border-border"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  {g.checked_in && <CheckCircle className="w-4 h-4 text-[hsl(var(--success))] shrink-0" />}
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{g.first_name} {g.last_name}</p>
-                    {g.note && <p className="text-xs text-muted-foreground truncate">{g.note}</p>}
+            {guests.map((g) =>
+              editingId === g.id ? (
+                <div key={g.id} className="space-y-2 p-3 rounded-lg bg-secondary/50 border border-border">
+                  <div className="flex gap-2">
+                    <Input placeholder="Förnamn" maxLength={60} value={editFirst} onChange={(e) => setEditFirst(e.target.value)} />
+                    <Input placeholder="Efternamn" maxLength={60} value={editLast} onChange={(e) => setEditLast(e.target.value)} />
+                  </div>
+                  <div className="flex gap-2">
+                    <Input placeholder="Notering (valfritt)" maxLength={120} value={editNote} onChange={(e) => setEditNote(e.target.value)} />
+                    <Button size="sm" disabled={busy === g.id} onClick={() => saveEdit(g)}>
+                      {busy === g.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Spara"}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditingId(null)} aria-label="Avbryt">
+                      <X className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button
-                    variant={g.checked_in ? "outline" : "default"}
-                    size="sm"
-                    disabled={busy === g.id}
-                    onClick={() => toggleCheckIn(g)}
-                  >
-                    {busy === g.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : g.checked_in ? (
-                      <Undo2 className="w-4 h-4" />
-                    ) : (
-                      "Checka in"
-                    )}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    disabled={busy === g.id}
-                    onClick={() => removeGuest(g)}
-                    aria-label="Ta bort gäst"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+              ) : (
+                <div
+                  key={g.id}
+                  className="flex items-center justify-between gap-2 p-3 rounded-lg bg-secondary/50 border border-border"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    {g.checked_in && <CheckCircle className="w-4 h-4 text-[hsl(var(--success))] shrink-0" />}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{g.first_name} {g.last_name}</p>
+                      {g.note && <p className="text-xs text-muted-foreground truncate">{g.note}</p>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant={g.checked_in ? "outline" : "default"}
+                      size="sm"
+                      disabled={busy === g.id}
+                      onClick={() => toggleCheckIn(g)}
+                    >
+                      {busy === g.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : g.checked_in ? (
+                        <Undo2 className="w-4 h-4" />
+                      ) : (
+                        "Checka in"
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={busy === g.id}
+                      onClick={() => {
+                        setEditingId(g.id);
+                        setEditFirst(g.first_name);
+                        setEditLast(g.last_name);
+                        setEditNote(g.note ?? "");
+                      }}
+                      aria-label="Redigera gäst"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={busy === g.id}
+                      onClick={() => removeGuest(g)}
+                      aria-label="Ta bort gäst"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            )}
           </div>
         )}
       </CardContent>
