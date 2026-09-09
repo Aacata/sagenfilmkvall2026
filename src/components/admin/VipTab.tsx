@@ -211,11 +211,11 @@ const VipTab = ({ onChange }: VipTabProps) => {
           <div className="flex justify-center py-6">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
-        ) : guests.length === 0 ? (
+        ) : sorted.length === 0 ? (
           <p className="text-muted-foreground text-sm text-center py-4">Inga VIP-gäster tillagda.</p>
         ) : (
           <div className="space-y-2 max-h-[55vh] overflow-y-auto">
-            {guests.map((g) =>
+            {sorted.map((g) =>
               editingId === g.id ? (
                 <div key={g.id} className="space-y-2 p-3 rounded-lg bg-secondary/50 border border-border">
                   <div className="flex gap-2">
