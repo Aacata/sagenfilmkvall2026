@@ -35,6 +35,36 @@ export type Database = {
         }
         Relationships: []
       }
+      event_settings: {
+        Row: {
+          capacity: number
+          created_at: string
+          event_info: string | null
+          event_title: string | null
+          id: number
+          poster_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          capacity?: number
+          created_at?: string
+          event_info?: string | null
+          event_title?: string | null
+          id?: number
+          poster_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          capacity?: number
+          created_at?: string
+          event_info?: string | null
+          event_title?: string | null
+          id?: number
+          poster_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tickets: {
         Row: {
           booking_id: string
@@ -88,6 +118,36 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      vip_guests: {
+        Row: {
+          checked_in: boolean
+          checked_in_at: string | null
+          created_at: string
+          first_name: string
+          id: string
+          last_name: string
+          note: string | null
+        }
+        Insert: {
+          checked_in?: boolean
+          checked_in_at?: string | null
+          created_at?: string
+          first_name: string
+          id?: string
+          last_name: string
+          note?: string | null
+        }
+        Update: {
+          checked_in?: boolean
+          checked_in_at?: string | null
+          created_at?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          note?: string | null
         }
         Relationships: []
       }

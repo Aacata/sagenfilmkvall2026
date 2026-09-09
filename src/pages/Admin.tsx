@@ -10,6 +10,8 @@ import ScannerTab from "@/components/admin/ScannerTab";
 import BookingsTab from "@/components/admin/BookingsTab";
 import AdminDelegateTab from "@/components/admin/AdminDelegateTab";
 import ChangePasswordTab from "@/components/admin/ChangePasswordTab";
+import VipTab from "@/components/admin/VipTab";
+import EventSettingsTab from "@/components/admin/EventSettingsTab";
 
 const Admin = () => {
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
@@ -43,14 +45,19 @@ const Admin = () => {
   }, []);
 
   const fetchStats = useCallback(async () => {
-    const { data } = await supabase.from("tickets").select("checked_in");
-    if (!data) return;
-    const arrived = data.filter((t) => t.checked_in).length;
+    const [{ data: tickets }, { data: vips }, { data: settings }] = await Promise.all([
+      supabase.from("tickets").select("checked_in"),
+      supabase.from("vip_guests").select("checked_in"),
+      supabase.from("event_settings").select("capacity").eq("id", 1).maybeSingle(),
+    ]);
+    const all = [...(tickets || []), ...(vips || [])];
+    const arrived = all.filter((t) => t.checked_in).length;
+    const capacity = settings?.capacity ?? 100;
     setStats({
-      booked: data.length,
+      booked: all.length,
       arrived,
-      waiting: data.length - arrived,
-      free: Math.max(0, 100 - data.length),
+      waiting: all.length - arrived,
+      free: Math.max(0, capacity - all.length),
     });
   }, []);
 
@@ -104,11 +111,13 @@ const Admin = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="scanner" className="space-y-4">
-          <TabsList className="w-full">
-            <TabsTrigger value="scanner" className="flex-1">Insläpp</TabsTrigger>
-            <TabsTrigger value="bookings" className="flex-1">Gäster</TabsTrigger>
-            <TabsTrigger value="admins" className="flex-1">Admins</TabsTrigger>
-            <TabsTrigger value="password" className="flex-1">Lösenord</TabsTrigger>
+          <TabsList className="w-full grid grid-cols-3 h-auto gap-1">
+            <TabsTrigger value="scanner">Insläpp</TabsTrigger>
+            <TabsTrigger value="bookings">Gäster</TabsTrigger>
+            <TabsTrigger value="vip">VIP</TabsTrigger>
+            <TabsTrigger value="event">Event</TabsTrigger>
+            <TabsTrigger value="admins">Admins</TabsTrigger>
+            <TabsTrigger value="password">Lösenord</TabsTrigger>
           </TabsList>
 
           <TabsContent value="scanner">
@@ -117,6 +126,14 @@ const Admin = () => {
 
           <TabsContent value="bookings">
             <BookingsTab onChange={fetchStats} />
+          </TabsContent>
+
+          <TabsContent value="vip">
+            <VipTab onChange={fetchStats} />
+          </TabsContent>
+
+          <TabsContent value="event">
+            <EventSettingsTab onChange={fetchStats} />
           </TabsContent>
 
           <TabsContent value="admins">
