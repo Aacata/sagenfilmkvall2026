@@ -43,14 +43,19 @@ const Admin = () => {
   }, []);
 
   const fetchStats = useCallback(async () => {
-    const { data } = await supabase.from("tickets").select("checked_in");
-    if (!data) return;
-    const arrived = data.filter((t) => t.checked_in).length;
+    const [{ data: tickets }, { data: vips }, { data: settings }] = await Promise.all([
+      supabase.from("tickets").select("checked_in"),
+      supabase.from("vip_guests").select("checked_in"),
+      supabase.from("event_settings").select("capacity").eq("id", 1).maybeSingle(),
+    ]);
+    const all = [...(tickets || []), ...(vips || [])];
+    const arrived = all.filter((t) => t.checked_in).length;
+    const capacity = settings?.capacity ?? 100;
     setStats({
-      booked: data.length,
+      booked: all.length,
       arrived,
-      waiting: data.length - arrived,
-      free: Math.max(0, 100 - data.length),
+      waiting: all.length - arrived,
+      free: Math.max(0, capacity - all.length),
     });
   }, []);
 
