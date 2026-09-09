@@ -89,6 +89,22 @@ const BookingsTab = ({ onChange }: BookingsTabProps) => {
       )
     : tickets;
 
+  const sorted = [...filtered].sort((a, b) => {
+    let cmp = 0;
+    if (sort.key === "name") {
+      cmp = `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, "sv");
+    } else if (sort.key === "booking") {
+      cmp = (a.bookings?.booking_number ?? "").localeCompare(b.bookings?.booking_number ?? "", "sv");
+    } else if (sort.key === "email") {
+      cmp = (a.bookings?.email ?? "").localeCompare(b.bookings?.email ?? "", "sv");
+    } else if (sort.key === "checked_in") {
+      cmp = Number(a.checked_in) - Number(b.checked_in);
+    } else if (sort.key === "created_at") {
+      cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    }
+    return sort.dir === "asc" ? cmp : -cmp;
+  });
+
   const arrived = tickets.filter((t) => t.checked_in).length;
 
   if (loading) {
