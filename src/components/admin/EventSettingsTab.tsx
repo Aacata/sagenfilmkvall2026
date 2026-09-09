@@ -231,6 +231,29 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
         </div>
 
         <div className="space-y-2">
+          <Label>Karta – sätt en nål på platsen</Label>
+          <LocationPicker
+            lat={lat}
+            lng={lng}
+            address={location}
+            onChange={({ lat: la, lng: ln, address }) => {
+              setLat(la);
+              setLng(ln);
+              if (address && !location.trim()) setLocation(address.slice(0, 120));
+            }}
+          />
+          {lat != null && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setLat(null); setLng(null); }}>
+              Ta bort nålen
+            </Button>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Nålen används för vägbeskrivningen som gästerna får när de klickar på platsen på startsidan. Glöm inte att
+            spara.
+          </p>
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="info">Information om eventet</Label>
           <Textarea id="info" rows={4} maxLength={800} value={info} onChange={(e) => setInfo(e.target.value)} />
         </div>
