@@ -6,4 +6,4 @@
 - [x] Admin: eventflik (maxantal, affisch, rubrik, info)
 - [x] Startsidan: affisch som bakgrund, redigerbar rubrik och info
 - [x] Admin: plats- och tidsfält för eventet + tydligare presentation på startsidan
-- [ ] Admin: nedladdningsbar QR-kod för affisch/flyer
+- [x] Admin: nedladdningsbar QR-kod för affisch/flyer
