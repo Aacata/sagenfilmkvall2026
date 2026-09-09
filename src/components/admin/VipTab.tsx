@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Crown, Loader2, Plus, Trash2, Undo2 } from "lucide-react";
+import { CheckCircle, Crown, Loader2, Pencil, Plus, Trash2, Undo2, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface VipGuest {
@@ -26,6 +26,10 @@ const VipTab = ({ onChange }: VipTabProps) => {
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
   const [note, setNote] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editFirst, setEditFirst] = useState("");
+  const [editLast, setEditLast] = useState("");
+  const [editNote, setEditNote] = useState("");
 
   const fetchGuests = useCallback(async () => {
     const { data } = await supabase
@@ -83,6 +87,31 @@ const VipTab = ({ onChange }: VipTabProps) => {
     );
     await fetchGuests();
     onChange?.();
+    setBusy(null);
+  };
+
+  const saveEdit = async (g: VipGuest) => {
+    if (!editFirst.trim() || !editLast.trim()) {
+      toast.error("Fyll i för- och efternamn");
+      return;
+    }
+    setBusy(g.id);
+    const { error } = await supabase
+      .from("vip_guests")
+      .update({
+        first_name: editFirst.trim(),
+        last_name: editLast.trim(),
+        note: editNote.trim() || null,
+      })
+      .eq("id", g.id);
+    if (error) {
+      toast.error("Kunde inte spara ändringen");
+    } else {
+      toast.success("Gästen är uppdaterad");
+      setEditingId(null);
+      await fetchGuests();
+      onChange?.();
+    }
     setBusy(null);
   };
 
