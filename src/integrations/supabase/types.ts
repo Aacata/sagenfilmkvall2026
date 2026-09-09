@@ -16,66 +16,62 @@ export type Database = {
     Tables: {
       bookings: {
         Row: {
-          checked_in: boolean
+          booking_number: string
           created_at: string
           email: string
           id: string
-          seat_ids: string[]
         }
         Insert: {
-          checked_in?: boolean
+          booking_number: string
           created_at?: string
           email: string
           id?: string
-          seat_ids: string[]
         }
         Update: {
-          checked_in?: boolean
+          booking_number?: string
           created_at?: string
           email?: string
           id?: string
-          seat_ids?: string[]
         }
         Relationships: []
       }
-      seats: {
+      tickets: {
         Row: {
-          booked_by_email: string | null
-          booking_id: string | null
+          booking_id: string
           checked_in: boolean
+          checked_in_at: string | null
           created_at: string
+          first_name: string
           id: string
-          is_booked: boolean
-          row_number: number
-          seat_number: number
-          seat_type: string
-          updated_at: string
+          last_name: string
         }
         Insert: {
-          booked_by_email?: string | null
-          booking_id?: string | null
+          booking_id: string
           checked_in?: boolean
+          checked_in_at?: string | null
           created_at?: string
-          id: string
-          is_booked?: boolean
-          row_number: number
-          seat_number: number
-          seat_type?: string
-          updated_at?: string
+          first_name: string
+          id?: string
+          last_name: string
         }
         Update: {
-          booked_by_email?: string | null
-          booking_id?: string | null
+          booking_id?: string
           checked_in?: boolean
+          checked_in_at?: string | null
           created_at?: string
+          first_name?: string
           id?: string
-          is_booked?: boolean
-          row_number?: number
-          seat_number?: number
-          seat_type?: string
-          updated_at?: string
+          last_name?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tickets_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -101,40 +97,20 @@ export type Database = {
     }
     Functions: {
       cancel_booking: { Args: { _booking_id: string }; Returns: Json }
-      cancel_seat: {
-        Args: { _booking_id: string; _seat_id: string }
+      cancel_ticket: {
+        Args: { _booking_id: string; _ticket_id: string }
         Returns: Json
       }
-      create_booking_secure: {
-        Args: { _email: string; _seat_ids: string[] }
+      check_in_ticket: { Args: { _ticket_id: string }; Returns: Json }
+      create_booking_with_names: {
+        Args: { _email: string; _names: Json }
         Returns: Json
       }
+      find_booking_by_number: { Args: { _number: string }; Returns: Json }
       find_user_by_email_fn: { Args: { _email: string }; Returns: string }
       fix_auth_user_nulls: { Args: { _user_id: string }; Returns: undefined }
-      get_booking_by_id: {
-        Args: { _booking_id: string }
-        Returns: {
-          checked_in: boolean
-          created_at: string
-          email: string
-          id: string
-          seat_ids: string[]
-        }[]
-      }
-      get_seats_public: {
-        Args: never
-        Returns: {
-          booking_id: string
-          checked_in: boolean
-          created_at: string
-          id: string
-          is_booked: boolean
-          row_number: number
-          seat_number: number
-          seat_type: string
-          updated_at: string
-        }[]
-      }
+      get_availability: { Args: never; Returns: Json }
+      get_booking_public: { Args: { _booking_id: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
