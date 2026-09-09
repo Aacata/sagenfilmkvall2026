@@ -189,12 +189,10 @@ export type Database = {
         Returns: Json
       }
       check_in_ticket: { Args: { _ticket_id: string }; Returns: Json }
-      create_booking_with_names:
-        | { Args: { _email: string; _names: Json }; Returns: Json }
-        | {
-            Args: { _email: string; _hold_id?: string; _names: Json }
-            Returns: Json
-          }
+      create_booking_with_names: {
+        Args: { _email: string; _hold_id?: string; _names: Json }
+        Returns: Json
+      }
       find_booking_by_number: { Args: { _number: string }; Returns: Json }
       find_user_by_email_fn: { Args: { _email: string }; Returns: string }
       fix_auth_user_nulls: { Args: { _user_id: string }; Returns: undefined }
