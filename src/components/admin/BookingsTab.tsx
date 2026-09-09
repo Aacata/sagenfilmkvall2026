@@ -157,11 +157,11 @@ const BookingsTab = ({ onChange }: BookingsTabProps) => {
         </div>
       </CardHeader>
       <CardContent>
-        {filtered.length === 0 ? (
+        {sorted.length === 0 ? (
           <p className="text-muted-foreground text-sm text-center py-4">Inga bokningar.</p>
         ) : (
           <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-            {filtered.map((t) => (
+            {sorted.map((t) => (
               <div
                 key={t.id}
                 className="flex items-center justify-between gap-2 p-3 rounded-lg bg-secondary/50 border border-border"
