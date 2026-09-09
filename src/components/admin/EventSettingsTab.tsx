@@ -178,6 +178,10 @@ const EventSettingsTab = ({ onChange }: EventSettingsTabProps) => {
             )}
           </div>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+          <p className="text-xs text-muted-foreground">
+            Stora bilder går bra (upp till 100 MB) – de förminskas och sparas automatiskt i ett snabbt webbformat.
+          </p>
+
         </div>
 
         <Button className="w-full" onClick={() => save()} disabled={saving}>
