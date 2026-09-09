@@ -33,6 +33,8 @@ const AdminDelegateTab = () => {
     fetchAdmins();
   }, []);
 
+  const [tempPassword, setTempPassword] = useState<{ email: string; password: string } | null>(null);
+
   const handleAddAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEmail.trim()) return;
@@ -45,15 +47,19 @@ const AdminDelegateTab = () => {
     if (error || data?.error) {
       toast.error(data?.error || "Kunde inte lägga till admin");
     } else {
-      const msg = data?.created
-        ? `Konto skapat för ${newEmail} med lösenord Admin1234! och admin-rättigheter tilldelade.`
-        : `${newEmail} har fått admin-rättigheter.`;
-      toast.success(msg);
+      if (data?.tempPassword) {
+        setTempPassword({ email: newEmail.trim(), password: data.tempPassword });
+        toast.success(`Konto skapat för ${newEmail}. Engångslösenordet visas nedan.`);
+      } else {
+        setTempPassword(null);
+        toast.success(`${newEmail} har fått admin-rättigheter.`);
+      }
       setNewEmail("");
       fetchAdmins();
     }
     setAdding(false);
   };
+
 
   const handleRemoveAdmin = async (admin: AdminUser) => {
     setRemoving(admin.id);
