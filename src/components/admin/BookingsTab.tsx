@@ -1,82 +1,90 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Trash2, Users, CheckCircle } from "lucide-react";
+import { Loader2, Trash2, Users, CheckCircle, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 
-interface BookedSeat {
+interface TicketRow {
   id: string;
-  row_number: number;
-  seat_number: number;
-  booked_by_email: string | null;
-  booking_id: string | null;
+  first_name: string;
+  last_name: string;
   checked_in: boolean;
-  seat_type: string;
+  booking_id: string;
+  bookings: { booking_number: string; email: string } | null;
 }
 
-const BookingsTab = () => {
-  const [seats, setSeats] = useState<BookedSeat[]>([]);
+interface BookingsTabProps {
+  onChange?: () => void;
+}
+
+const BookingsTab = ({ onChange }: BookingsTabProps) => {
+  const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [cancelling, setCancelling] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
-  const fetchBookedSeats = async () => {
+  const fetchTickets = useCallback(async () => {
     const { data } = await supabase
-      .from("seats")
-      .select("id, row_number, seat_number, booked_by_email, booking_id, checked_in, seat_type")
-      .eq("is_booked", true)
-      .order("row_number")
-      .order("seat_number");
-    setSeats(data || []);
+      .from("tickets")
+      .select("id, first_name, last_name, checked_in, booking_id, bookings(booking_number, email)")
+      .order("created_at");
+    setTickets((data as unknown as TicketRow[]) || []);
     setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchBookedSeats();
-
-    const channel = supabase
-      .channel("admin-seats")
-      .on("postgres_changes", { event: "*", schema: "public", table: "seats" }, () => {
-        fetchBookedSeats();
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
   }, []);
 
-  const handleCancelBooking = async (seat: BookedSeat) => {
-    setCancelling(seat.id);
-    
-    // Clear the seat
-    await supabase.from("seats").update({
-      is_booked: false,
-      booked_by_email: null,
-      booking_id: null,
-      checked_in: false,
-    }).eq("id", seat.id);
+  useEffect(() => {
+    fetchTickets();
+    const interval = setInterval(fetchTickets, 8000);
+    return () => clearInterval(interval);
+  }, [fetchTickets]);
 
-    // If there's a booking_id, remove the seat from the booking's seat_ids
-    if (seat.booking_id) {
-      const { data: booking } = await supabase
-        .from("bookings")
-        .select("seat_ids")
-        .eq("id", seat.booking_id)
-        .single();
-
-      if (booking) {
-        const updatedIds = booking.seat_ids.filter((id: string) => id !== seat.id);
-        if (updatedIds.length === 0) {
-          // Delete the booking entirely if no seats left
-          await supabase.from("bookings").delete().eq("id", seat.booking_id);
-        } else {
-          await supabase.from("bookings").update({ seat_ids: updatedIds }).eq("id", seat.booking_id);
-        }
+  const toggleCheckIn = async (t: TicketRow) => {
+    setBusy(t.id);
+    if (t.checked_in) {
+      await supabase.from("tickets").update({ checked_in: false, checked_in_at: null }).eq("id", t.id);
+      toast.success(`${t.first_name} ${t.last_name} – incheckning ångrad`);
+    } else {
+      const { data } = await supabase.rpc("check_in_ticket", { _ticket_id: t.id });
+      const res = data as { error?: string } | null;
+      if (res?.error) {
+        toast.error(res.error);
+      } else {
+        toast.success(`${t.first_name} ${t.last_name} incheckad`);
       }
     }
-
-    toast.success(`Rad ${seat.row_number}, Plats ${seat.seat_number} – bokning borttagen`);
-    setCancelling(null);
+    await fetchTickets();
+    onChange?.();
+    setBusy(null);
   };
+
+  const removeTicket = async (t: TicketRow) => {
+    setBusy(t.id);
+    await supabase.from("tickets").delete().eq("id", t.id);
+    const { count } = await supabase
+      .from("tickets")
+      .select("id", { count: "exact", head: true })
+      .eq("booking_id", t.booking_id);
+    if (!count) {
+      await supabase.from("bookings").delete().eq("id", t.booking_id);
+    }
+    toast.success(`${t.first_name} ${t.last_name} – bokning borttagen`);
+    await fetchTickets();
+    onChange?.();
+    setBusy(null);
+  };
+
+  const query = search.trim().toLowerCase();
+  const filtered = query
+    ? tickets.filter((t) =>
+        `${t.first_name} ${t.last_name} ${t.bookings?.booking_number ?? ""} ${t.bookings?.email ?? ""}`
+          .toLowerCase()
+          .includes(query)
+      )
+    : tickets;
+
+  const arrived = tickets.filter((t) => t.checked_in).length;
 
   if (loading) {
     return (
@@ -88,47 +96,61 @@ const BookingsTab = () => {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="space-y-3">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Users className="w-5 h-5" />
-          Bokade platser ({seats.length})
+          Gästlista ({arrived}/{tickets.length} anlända)
         </CardTitle>
+        <Input
+          placeholder="Sök namn, bokningsnummer eller e-post"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
       </CardHeader>
       <CardContent>
-        {seats.length === 0 ? (
-          <p className="text-muted-foreground text-sm text-center py-4">Inga bokade platser.</p>
+        {filtered.length === 0 ? (
+          <p className="text-muted-foreground text-sm text-center py-4">Inga bokningar.</p>
         ) : (
           <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-            {seats.map((seat) => (
+            {filtered.map((t) => (
               <div
-                key={seat.id}
-                className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 border border-border"
+                key={t.id}
+                className="flex items-center justify-between gap-2 p-3 rounded-lg bg-secondary/50 border border-border"
               >
-                <div className="flex items-center gap-3">
-                  {seat.checked_in && (
-                    <CheckCircle className="w-4 h-4 text-[hsl(var(--success))] shrink-0" />
-                  )}
-                  <div>
-                    <p className="text-sm font-medium">
-                      Rad {seat.row_number}, Plats {seat.seat_number}
-                      <span className="ml-2 text-xs text-muted-foreground capitalize">({seat.seat_type})</span>
+                <div className="flex items-center gap-3 min-w-0">
+                  {t.checked_in && <CheckCircle className="w-4 h-4 text-[hsl(var(--success))] shrink-0" />}
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{t.first_name} {t.last_name}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {t.bookings?.booking_number} · {t.bookings?.email}
                     </p>
-                    <p className="text-xs text-muted-foreground">{seat.booked_by_email || "–"}</p>
                   </div>
                 </div>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  disabled={cancelling === seat.id}
-                  onClick={() => handleCancelBooking(seat)}
-                >
-                  {cancelling === seat.id ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    variant={t.checked_in ? "outline" : "default"}
+                    size="sm"
+                    disabled={busy === t.id}
+                    onClick={() => toggleCheckIn(t)}
+                  >
+                    {busy === t.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : t.checked_in ? (
+                      <Undo2 className="w-4 h-4" />
+                    ) : (
+                      "Checka in"
+                    )}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={busy === t.id}
+                    onClick={() => removeTicket(t)}
+                    aria-label="Ta bort bokning"
+                  >
                     <Trash2 className="w-4 h-4" />
-                  )}
-                  <span className="ml-1 hidden sm:inline">Ta bort</span>
-                </Button>
+                  </Button>
+                </div>
               </div>
             ))}
           </div>

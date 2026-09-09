@@ -13,9 +13,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { adminEmail, userEmail, seatLabels, allCancelled, bookingId } = await req.json();
+    const { adminEmail, userEmail, names, allCancelled, bookingId, bookingNumber } = await req.json();
 
-    if (!adminEmail || !userEmail || !seatLabels || !bookingId) {
+    if (!adminEmail || !userEmail || !Array.isArray(names) || !bookingId) {
       return new Response(JSON.stringify({ error: "Missing fields" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
       },
     });
 
-    const seatsHtml = seatLabels
+    const namesHtml = (names as string[])
       .map((s: string) => `<span style="display:inline-block;background:#fee2e2;color:#dc2626;padding:4px 10px;border-radius:6px;margin:2px;font-size:14px;">${s}</span>`)
       .join(" ");
 
@@ -48,18 +48,18 @@ Deno.serve(async (req) => {
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#ffffff;">
         <h1 style="text-align:center;color:#1e293b;font-size:24px;">🎬 Avbokning</h1>
         <h2 style="text-align:center;color:#dc2626;font-size:18px;font-weight:normal;">
-          ${allCancelled ? "Hela bokningen avbokad" : "Enskild plats avbokad"}
+          ${allCancelled ? "Hela bokningen avbokad" : "Enskild biljett avbokad"}
         </h2>
         
         <div style="background:#f8fafc;border-radius:12px;padding:20px;margin:20px 0;">
           <p style="color:#475569;font-size:14px;margin:0 0 8px;"><strong>Bokare:</strong> ${userEmail}</p>
-          <p style="color:#475569;font-size:14px;margin:0 0 8px;"><strong>Boknings-ID:</strong> ${bookingId}</p>
-          <p style="color:#475569;font-size:14px;margin:0;"><strong>Avbokade platser:</strong></p>
-          <div style="margin-top:8px;">${seatsHtml}</div>
+          <p style="color:#475569;font-size:14px;margin:0 0 8px;"><strong>Bokningsnummer:</strong> ${bookingNumber ?? bookingId}</p>
+          <p style="color:#475569;font-size:14px;margin:0;"><strong>Avbokade biljetter:</strong></p>
+          <div style="margin-top:8px;">${namesHtml}</div>
         </div>
         
         <p style="text-align:center;color:#94a3b8;font-size:12px;">
-          ${allCancelled ? "Bokningen har raderats helt." : "Resterande platser i bokningen är kvar."}
+          ${allCancelled ? "Bokningen har raderats helt." : "Resterande biljetter i bokningen är kvar."}
         </p>
       </div>
     `;
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     await transporter.sendMail({
       from: `"Sägen Filmkväll" <${GMAIL_USER}>`,
       to: adminEmail,
-      subject: `❌ Avbokning – ${userEmail} (${seatLabels.join(", ")})`,
+      subject: `❌ Avbokning – ${userEmail} (${(names as string[]).join(", ")})`,
       html,
     });
 

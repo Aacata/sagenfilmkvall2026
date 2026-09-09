@@ -5,57 +5,38 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, XCircle, CheckCircle2, X } from "lucide-react";
 import { toast } from "sonner";
+import type { BookingData } from "./Booking";
 
-type Status = "loading" | "confirm" | "cancelling" | "done" | "not_found";
-
-interface SeatInfo {
-  id: string;
-  row_number: number;
-  seat_number: number;
-  seat_type: string;
-}
+type Status = "loading" | "confirm" | "working" | "done" | "not_found";
 
 const CancelBooking = () => {
   const { id } = useParams<{ id: string }>();
   const [status, setStatus] = useState<Status>("loading");
-  const [booking, setBooking] = useState<{ email: string; seat_ids: string[] } | null>(null);
-  const [seatDetails, setSeatDetails] = useState<SeatInfo[]>([]);
-  const [cancelledSeats, setCancelledSeats] = useState<string[]>([]);
-
-  const fetchBooking = async () => {
-    if (!id) return;
-    const { data, error } = await supabase.rpc("get_booking_by_id", { _booking_id: id });
-
-    if (error || !data || data.length === 0) {
-      setStatus("not_found");
-      return;
-    }
-
-    const b = data[0];
-    setBooking({ email: b.email, seat_ids: b.seat_ids });
-
-    // Fetch seat details from public view
-    // Fetch seat details via secure function
-    const { data: allSeats } = await supabase.rpc("get_seats_public");
-    const seats = (allSeats as any[] || []).filter((s: any) => b.seat_ids.includes(s.id));
-
-    setSeatDetails(seats as SeatInfo[]);
-    setStatus("confirm");
-  };
+  const [booking, setBooking] = useState<BookingData | null>(null);
 
   useEffect(() => {
-    fetchBooking();
+    if (!id) return;
+    supabase.rpc("get_booking_public", { _booking_id: id }).then(({ data }) => {
+      const b = data as unknown as BookingData | null;
+      if (!b) {
+        setStatus("not_found");
+        return;
+      }
+      setBooking(b);
+      setStatus("confirm");
+    });
   }, [id]);
 
-  const sendAdminNotification = async (email: string, cancelledSeatLabels: string[], allCancelled: boolean) => {
+  const notifyAdmin = (email: string, names: string[], allCancelled: boolean) => {
     supabase.functions
       .invoke("send-cancellation-notice", {
         body: {
           adminEmail: "hellosagen@gmail.com",
           userEmail: email,
-          seatLabels: cancelledSeatLabels,
+          names,
           allCancelled,
           bookingId: id,
+          bookingNumber: booking?.booking_number,
         },
       })
       .then(({ error }) => {
@@ -63,51 +44,37 @@ const CancelBooking = () => {
       });
   };
 
-  const handleCancelSeat = async (seatId: string) => {
+  const cancelOne = async (ticketId: string) => {
     if (!id || !booking) return;
-
-    const seat = seatDetails.find((s) => s.id === seatId);
-    const seatLabel = seat ? `Rad ${seat.row_number}, Plats ${seat.seat_number}` : seatId;
-
-    const { data, error } = await supabase.rpc("cancel_seat", {
+    const { data, error } = await supabase.rpc("cancel_ticket", {
       _booking_id: id,
-      _seat_id: seatId,
+      _ticket_id: ticketId,
     });
-
-    if (error || (data as any)?.error) {
-      toast.error("Kunde inte avboka platsen");
+    const res = data as { error?: string; email?: string; name?: string; booking_deleted?: boolean } | null;
+    if (error || res?.error) {
+      toast.error(res?.error || "Kunde inte avboka biljetten");
       return;
     }
-
-    const result = data as any;
-    await sendAdminNotification(result.email, [seatLabel], result.booking_deleted);
-    setCancelledSeats((prev) => [...prev, seatId]);
-
-    if (result.booking_deleted) {
+    notifyAdmin(res!.email!, [res!.name!], !!res!.booking_deleted);
+    if (res!.booking_deleted) {
       setStatus("done");
     } else {
-      setBooking({ ...booking, seat_ids: booking.seat_ids.filter((sid) => sid !== seatId) });
-      toast.success(`${seatLabel} avbokad`);
+      setBooking({ ...booking, tickets: booking.tickets.filter((t) => t.id !== ticketId) });
+      toast.success(`${res!.name} avbokad`);
     }
   };
 
-  const handleCancelAll = async () => {
+  const cancelAll = async () => {
     if (!id || !booking) return;
-    setStatus("cancelling");
-
-    const labels = seatDetails
-      .filter((s) => booking.seat_ids.includes(s.id))
-      .map((s) => `Rad ${s.row_number}, Plats ${s.seat_number}`);
-
+    setStatus("working");
     const { data, error } = await supabase.rpc("cancel_booking", { _booking_id: id });
-
-    if (error || (data as any)?.error) {
+    const res = data as { error?: string; email?: string; names?: string[] } | null;
+    if (error || res?.error) {
       setStatus("confirm");
-      toast.error("Kunde inte avboka platserna");
+      toast.error("Kunde inte avboka");
       return;
     }
-
-    await sendAdminNotification((data as any).email, labels, true);
+    notifyAdmin(res!.email!, res!.names || [], true);
     setStatus("done");
   };
 
@@ -119,105 +86,57 @@ const CancelBooking = () => {
     );
   }
 
-  const activeSeats = seatDetails.filter(
-    (s) => booking?.seat_ids.includes(s.id) && !cancelledSeats.includes(s.id)
-  );
-
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
       <Card className="w-full max-w-md text-center">
         <CardHeader>
           <CardTitle className="flex items-center justify-center gap-2">
             {status === "done" ? (
-              <><CheckCircle2 className="w-6 h-6 text-primary" /> Avbokning klar</>
+              <><CheckCircle2 className="w-6 h-6 text-[hsl(var(--success))]" />Avbokat</>
+            ) : status === "not_found" ? (
+              <><XCircle className="w-6 h-6 text-destructive" />Hittades inte</>
             ) : (
-              <><XCircle className="w-6 h-6 text-destructive" /> Avboka platser</>
+              <>Avboka biljetter</>
             )}
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col items-center gap-4">
+        <CardContent className="space-y-4">
           {status === "not_found" && (
-            <>
-              <p className="text-muted-foreground">Bokningen hittades inte. Den kan redan ha avbokats.</p>
-              <Button asChild variant="outline">
-                <Link to="/"><ArrowLeft className="w-4 h-4 mr-2" /> Tillbaka</Link>
-              </Button>
-            </>
-          )}
-
-          {status === "confirm" && booking && (
-            <>
-              <p className="text-muted-foreground text-sm">{booking.email}</p>
-
-              {activeSeats.length > 1 && (
-                <p className="text-muted-foreground text-sm">
-                  Klicka på <X className="w-3 h-3 inline" /> för att avboka en enskild plats, eller avboka alla.
-                </p>
-              )}
-
-              <div className="flex flex-wrap gap-2 justify-center">
-                {activeSeats.map((seat) => (
-                  <div
-                    key={seat.id}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm font-medium"
-                  >
-                    <span>Rad {seat.row_number}, Plats {seat.seat_number}{seat.seat_type === "vip" ? " ★" : ""}</span>
-                    <button
-                      onClick={() => handleCancelSeat(seat.id)}
-                      className="ml-1 p-0.5 rounded-full hover:bg-destructive/20 hover:text-destructive transition-colors"
-                      title="Avboka denna plats"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              {cancelledSeats.length > 0 && (
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {seatDetails
-                    .filter((s) => cancelledSeats.includes(s.id))
-                    .map((seat) => (
-                      <span
-                        key={seat.id}
-                        className="px-3 py-1.5 rounded-lg bg-muted text-muted-foreground text-sm line-through"
-                      >
-                        Rad {seat.row_number}, Plats {seat.seat_number}
-                      </span>
-                    ))}
-                </div>
-              )}
-
-              <div className="flex gap-3 mt-4">
-                {activeSeats.length > 1 && (
-                  <Button variant="destructive" onClick={handleCancelAll}>
-                    Avboka alla ({activeSeats.length})
-                  </Button>
-                )}
-                {activeSeats.length === 1 && (
-                  <Button variant="destructive" onClick={() => handleCancelSeat(activeSeats[0].id)}>
-                    Avboka sista platsen
-                  </Button>
-                )}
-                <Button asChild variant="outline">
-                  <Link to="/">Behåll</Link>
-                </Button>
-              </div>
-            </>
-          )}
-
-          {status === "cancelling" && (
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            <p className="text-muted-foreground text-sm">
+              Bokningen finns inte längre – den kan redan vara avbokad.
+            </p>
           )}
 
           {status === "done" && (
+            <p className="text-muted-foreground text-sm">
+              Dina platser är nu lediga för andra. Tack för att du meddelade oss!
+            </p>
+          )}
+
+          {(status === "confirm" || status === "working") && booking && (
             <>
-              <p className="text-muted-foreground">Avbokningen är genomförd och platserna är lediga igen.</p>
-              <Button asChild variant="outline" className="mt-2">
-                <Link to="/"><ArrowLeft className="w-4 h-4 mr-2" /> Boka nya platser</Link>
+              <p className="text-sm text-muted-foreground">
+                Bokning {booking.booking_number} · {booking.email}
+              </p>
+              <div className="space-y-2">
+                {booking.tickets.map((t) => (
+                  <div key={t.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 border border-border">
+                    <span className="text-sm">{t.first_name} {t.last_name}</span>
+                    <Button variant="ghost" size="sm" onClick={() => cancelOne(t.id)} disabled={status === "working"}>
+                      <X className="w-4 h-4 mr-1" />Avboka
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <Button variant="destructive" className="w-full" onClick={cancelAll} disabled={status === "working"}>
+                {status === "working" ? <Loader2 className="w-4 h-4 animate-spin" /> : "Avboka hela bokningen"}
               </Button>
             </>
           )}
+
+          <Button asChild variant="outline">
+            <Link to="/"><ArrowLeft className="w-4 h-4 mr-2" />Till startsidan</Link>
+          </Button>
         </CardContent>
       </Card>
     </div>
