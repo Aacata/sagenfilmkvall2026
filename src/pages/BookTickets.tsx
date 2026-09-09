@@ -21,12 +21,14 @@ const BookTickets = () => {
   const [email, setEmail] = useState("");
   const [guests, setGuests] = useState<Guest[]>([{ first_name: "", last_name: "" }]);
   const [remaining, setRemaining] = useState<number | null>(null);
+  const [capacity, setCapacity] = useState(100);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     supabase.rpc("get_availability").then(({ data }) => {
-      const res = data as { remaining?: number } | null;
+      const res = data as { remaining?: number; capacity?: number } | null;
       if (res && typeof res.remaining === "number") setRemaining(res.remaining);
+      if (res && typeof res.capacity === "number") setCapacity(res.capacity);
     });
   }, []);
 
