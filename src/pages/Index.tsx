@@ -67,9 +67,10 @@ const Index = () => {
             src={settings.poster_url}
             alt=""
             aria-hidden="true"
-            className="absolute inset-0 w-full h-full object-cover opacity-30"
+            className="absolute inset-0 w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/70 to-background" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background lg:from-background/40 lg:via-background/25" />
+          <div className="absolute inset-0 bg-black/10 lg:bg-black/5" />
         </>
       )}
 
@@ -82,7 +83,7 @@ const Index = () => {
         </header>
 
         <main className="flex-1 flex flex-col items-center justify-center text-center gap-6 py-12">
-          <h1 className="text-5xl sm:text-6xl font-bold tracking-tight max-w-3xl leading-tight">{title}</h1>
+          <h1 className="text-5xl sm:text-6xl font-bold tracking-tight max-w-3xl leading-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)]">{title}</h1>
 
           <div className="flex flex-col items-center gap-2 text-lg sm:text-xl text-muted-foreground">
             {location &&
