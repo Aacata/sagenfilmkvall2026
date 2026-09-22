@@ -85,7 +85,7 @@ const Index = () => {
         <main className="flex-1 flex flex-col items-center justify-center text-center gap-6 py-12">
           <h1 className="text-5xl sm:text-6xl font-bold tracking-tight max-w-3xl leading-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)]">{title}</h1>
 
-          <div className="flex flex-col items-center gap-2 text-lg sm:text-xl text-muted-foreground">
+          <div className="flex flex-col items-center gap-2 text-lg sm:text-xl text-muted-foreground drop-shadow-[0_1px_6px_rgba(0,0,0,0.85)]">
             {location &&
               (directionsUrl ? (
                 <a
@@ -122,7 +122,7 @@ const Index = () => {
             </a>
           )}
 
-          <p className="text-muted-foreground max-w-md whitespace-pre-line text-base">{info}</p>
+          <p className="text-muted-foreground max-w-md whitespace-pre-line text-base drop-shadow-[0_1px_6px_rgba(0,0,0,0.85)]">{info}</p>
 
           {remaining !== null && (
             <p className="text-sm text-muted-foreground">
